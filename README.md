@@ -4,8 +4,6 @@
 
 A collection of examples designed to help you get started with Pipekit. All these examples will work out-of-the-box with the cluster provided with your free Pipekit trial.
 
-For a free trial of Pipekit, head to [pipekit.io](https://pipekit.io).
-
 ## Getting Started
 
 1. Create a free trial account at [pipekit.io](https://pipekit.io).
