@@ -15,5 +15,5 @@ A collection of examples designed to help you get started with Pipekit. All thes
 | Example                                        | Description                                                                                        |
 |------------------------------------------------|----------------------------------------------------------------------------------------------------|
 | [ fan-out-fan-in ]( examples/fan-out-fan-in/ ) | Shows how S3 artifact processing can be parallelized with Argo Workflows using a fan-out approach. |
-|                                                |                                                                                                    |
+| [ hera-coinflip](examples/hera-coinflip/)      | Runs a basic coinflip example using the Hera Python framework.                                     |
 |                                                |                                                                                                    |
