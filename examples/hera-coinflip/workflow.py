@@ -2,7 +2,7 @@ from hera.workflows import DAG, Workflow, script
 from hera.shared import global_config
 from pipekit_sdk.service import PipekitService
 
-pipekit = PipekitService(token='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZGVudGl0eVVVSUQiOiI4OTAxNTQ1My00ZTM0LTQ4MWYtYWYwNi02Y2QyNjZjZmQ5ZDkiLCJpc0ludGVybmFsIjp0cnVlLCJDbHVzdGVyVVVJRCI6IiIsIk9yZ1VVSUQiOiIiLCJpc0FjdGl2ZSI6dHJ1ZSwiaXNzIjoicGlwZWtpdCIsImV4cCI6MTY5NTg5ODcyOX0.I3Z1-NEbEW-P9lAqhm9HylPR4QcxO_67RKtIJ194lCU')
+pipekit = PipekitService(token='REPLACE_ME')
 
 @script()
 def flip():
@@ -25,4 +25,4 @@ with Workflow(generate_name="coinflip-", entrypoint="d", namespace="argo", servi
         heads().on_other_result(f, "heads")
         tails().on_other_result(f, "tails")
 
-pipekit.submit(w, "vcluster-test")
+pipekit.submit(w, "REPLACE_ME")
