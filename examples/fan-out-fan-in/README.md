@@ -1,4 +1,4 @@
-[![Pipekit Logo](../assets/images/pipekit-logo.png)](https://pipekit.io)
+[![Pipekit Logo](../../assets/images/pipekit-logo.png)](https://pipekit.io)
 
 # Fan Out Fan In
 

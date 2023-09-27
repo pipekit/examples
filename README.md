@@ -16,6 +16,6 @@ For a free trial of Pipekit, head to [pipekit.io](https://pipekit.io).
 
 | Example                                        | Description                                                                                        |
 |------------------------------------------------|----------------------------------------------------------------------------------------------------|
-| [ fan-out-fan-in ]( fan-out-fan-in/README.md ) | Shows how S3 artifact processing can be parallelized with Argo Workflows using a fan-out approach. |
+| [ fan-out-fan-in ]( examples/fan-out-fan-in/ ) | Shows how S3 artifact processing can be parallelized with Argo Workflows using a fan-out approach. |
 |                                                |                                                                                                    |
 |                                                |                                                                                                    |
