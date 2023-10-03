@@ -2,7 +2,7 @@
 
 # Pipekit Argo Workflows Examples
 
-A collection of examples designed to help you get started with Pipekit. All these examples will work out-of-the-box with the cluster provided with your free Pipekit trial.
+A collection of examples designed to help you get started with Pipekit. All these examples will work out-of-the-box with the [Pipekit Getting Started guide](https://docs.pipekit.io/getting-started).
 
 ## Getting Started
 
@@ -14,6 +14,7 @@ A collection of examples designed to help you get started with Pipekit. All thes
 
 | Example                                        | Description                                                                                        |
 |------------------------------------------------|----------------------------------------------------------------------------------------------------|
+| [ dag-diamond ]( examples/dag-diamond/ )       | Runs a basic DAG workflow.                                                                         |
 | [ fan-out-fan-in ]( examples/fan-out-fan-in/ ) | Shows how S3 artifact processing can be parallelized with Argo Workflows using a fan-out approach. |
 | [ hera-coinflip](examples/hera-coinflip/)      | Runs a basic coinflip example using the Hera Python framework.                                     |
 |                                                |                                                                                                    |
