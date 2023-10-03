@@ -1,0 +1,59 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: versions-
+  namespace: argo
+spec:
+  entrypoint: main
+  serviceAccountName: argo-workflow
+  templates:
+    - name: main
+      dag:
+        tasks:
+          - name: kubernetes-version
+            template: kubernetes-version
+          - name: argo-version
+            template: argo-version
+          - name: pipekit-version
+            template: pipekit-version
+          - name: minio-version
+            template: minio-version
+
+    - name: kubernetes-version
+      container:
+        image: dtzar/helm-kubectl
+        command:
+          - /bin/bash
+          - -c
+          - |
+            kubectl version
+
+    - name: argo-version
+      container:
+        image: dtzar/helm-kubectl
+        command:
+          - /bin/bash
+          - -c
+          - |
+            version=$(kubectl -n pipekit get deployment -l app.kubernetes.io/component=workflow-controller -o=jsonpath="{..image}")
+            echo "Argo Workflows: $version"
+
+    - name: pipekit-version
+      container:
+        image: dtzar/helm-kubectl
+        command:
+          - /bin/bash
+          - -c
+          - |
+            version=$(kubectl -n pipekit get deployment -l app.kubernetes.io/name=pipekit-agent -o=jsonpath="{..image}")
+            echo "Pipekit Agent: $version"
+
+    - name: minio-version
+      container:
+        image: dtzar/helm-kubectl
+        command:
+          - /bin/bash
+          - -c
+          - |
+            version=$(kubectl -n pipekit get deployment -l app=minio -o=jsonpath="{..image}")
+            echo "Minio: $version"
