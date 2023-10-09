@@ -20,10 +20,12 @@ spec:
                   value: "{{item.label}}"
                 - name: hrname
                   value: "{{item.hrname}}"
+                - name: type
+                  value: "{{item.type}}"
             withItems:
-              - { label: "app.kubernetes.io/component=workflow-controller", hrname: "Argo Workflows" }
-              - { label: "app.kubernetes.io/name=pipekit-agent", hrname: "Pipekit Agent" }
-              - { label: "app=minio", hrname: "Minio" }
+              - { label: "app.kubernetes.io/component=workflow-controller", hrname: "Argo Workflows", type: "deployment" }
+              - { label: "app.kubernetes.io/name=pipekit-agent", hrname: "Pipekit Agent", type: "deployment" }
+              - { label: "app=minio", hrname: "Minio", type: "statefulset" }
 
     - name: kubernetes-version
       container:
@@ -39,11 +41,12 @@ spec:
         parameters:
           - name: label
           - name: hrname
+          - name: type
       container:
         image: dtzar/helm-kubectl
         command:
           - /bin/bash
           - -c
           - |
-            version=$(kubectl -n pipekit get deployment -l {{inputs.parameters.label}} -o=jsonpath="{..image}")
+            version=$(kubectl -n pipekit get {{inputs.parameters.type}} -l {{inputs.parameters.label}} -o=jsonpath="{..image}")
             echo "{{inputs.parameters.hrname}}: $version"
