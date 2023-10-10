@@ -12,7 +12,7 @@ A collection of examples designed to help you get started with Pipekit. All thes
 
 ## Examples
 
-| Example                                                     | Description                                                                                                                                 |
+| Example Name                                                | Description                                                                                                                                 |
 |-------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------|
 | [ cronworkflow-example ]( examples/cronworkflow-example/ )  | Runs a basic CronWorkflow.                                                                                                                  |
 | [ dag-diamond ]( examples/dag-diamond/ )                    | Runs a basic DAG Workflow.                                                                                                                  |
