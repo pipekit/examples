@@ -8,3 +8,14 @@ It also includes further artifact configurations:
 - `artifactGC` strategy for all artifacts, plus an over-ride for the final output step
 - including `{{workflow.uid}}` in the artifact key
 - `podSpecPatch` for increased resources for the `reduce` step
+
+## Log into Pipekit via the CLI
+With the CLI installed, log into Pipekit:
+```bash
+pipekit login
+```
+
+## Running the native Workflow
+```bash
+pipekit submit -w --cluster-name=free-trial-cluster --pipe-name=fan-out-fan-in-example workflow.yaml
+```
