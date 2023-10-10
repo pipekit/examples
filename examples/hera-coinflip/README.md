@@ -4,11 +4,20 @@
 
 This example runs the [coinflip workflow](https://github.com/argoproj-labs/hera/blob/main/examples/workflows/coinflip.py).
 
+## Log into Pipekit via the CLI
+With the CLI installed, log into Pipekit:
+```bash
+pipekit login
+```
 
-## Getting Started
+## Running the Hera Workflow
+Install the Pipekit SDK. Set an environment variable with your Hera token, then run workflow.py
 
-1. Run `pip install pipekit-sdk`
-2. [Generate a new Hera API token in your Pipekit account using the pipekit CLI](https://docs.pipekit.io/cli#hera).
-3. Insert the token into `workflow.py` (line 5).
-4. Choose a cluster name and insert it into `workflow.py` (line 28).
-5. Run workflow.py
+```bash
+pip install pipekit-sdk
+export PIPEKIT_HERA_TOKEN=$(pipekit hera | cut -c10-)
+python3 workflow.py
+```
+
+## Change the cluster name
+If you're using a different cluster name, modify `free-trial-cluster` on the last line.

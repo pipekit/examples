@@ -2,7 +2,8 @@ from hera.workflows import DAG, Workflow, script
 from hera.shared import global_config
 from pipekit_sdk.service import PipekitService
 
-pipekit = PipekitService(token='REPLACE_ME')
+import os
+pipekit = PipekitService(token=os.environ['PIPEKIT_HERA_TOKEN'])
 
 @script()
 def flip():
@@ -25,4 +26,4 @@ with Workflow(generate_name="coinflip-", entrypoint="d", namespace="argo", servi
         heads().on_other_result(f, "heads")
         tails().on_other_result(f, "tails")
 
-pipekit.submit(w, "REPLACE_ME")
+pipekit.submit(w, "free-trial-cluster")
