@@ -23,7 +23,7 @@ Install the Pipekit SDK. Set an environment variable with your Hera token, then 
 ```bash
 pip install pipekit-sdk
 export PIPEKIT_HERA_TOKEN=$(pipekit hera | cut -c10-)
-python3 workflow.py
+python workflow.py
 ```
 
 ## Change the cluster name
