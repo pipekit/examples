@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: CronWorkflow
+metadata:
+  name: cron-wf-example
+  namespace: argo
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: "Replace"
+  startingDeadlineSeconds: 0
+  workflowSpec:
+    serviceAccountName: argo-workflow
+    entrypoint: main
+    templates:
+      - name: main
+        container:
+          image: alpine
+        command:
+          - sh
+          - -c
+          - |
+            echo "I am a CronWorkflow"
+            echo "It is currently $(date)"

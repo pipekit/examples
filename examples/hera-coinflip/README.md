@@ -20,4 +20,4 @@ python workflow.py
 ```
 
 ### Change the cluster name
-If you're using a different cluster name, modify `free-trial-cluster` on the last line.
+If you're using a different cluster name, modify `free-trial-cluster` on the last line of `workflow.py`.
