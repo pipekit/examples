@@ -26,5 +26,5 @@ export PIPEKIT_HERA_TOKEN=$(pipekit hera | cut -c10-)
 python workflow.py
 ```
 
-## Change the cluster name
+### Change the cluster name
 If you're using a different cluster name, modify `free-trial-cluster` on the last line.
