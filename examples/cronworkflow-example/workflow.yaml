@@ -15,9 +15,16 @@ spec:
       - name: main
         container:
           image: alpine:3.18
-        command:
-          - sh
-          - -c
-          - |
-            echo "I am a CronWorkflow"
-            echo "It is currently $(date)"
+          command:
+            - sh
+            - -c
+            - |
+              echo "I am a CronWorkflow"
+              echo "It is currently $(date)"
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "10m"
+            limits:
+              memory: "32Mi"
+              cpu: "10m"

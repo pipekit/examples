@@ -38,3 +38,10 @@ spec:
       container:
         image: alpine:3.18
         command: [echo, "{{inputs.parameters.message}}"]
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "10m"

@@ -1,13 +1,13 @@
 import os
 
-from hera.workflows import DAG, Workflow, script
+from hera.workflows import DAG, Workflow, script, Resources
 from pipekit_sdk.service import PipekitService
 
 # Obtain Pipekit Hera token from environment variable
 pipekit = PipekitService(token=os.environ["PIPEKIT_HERA_TOKEN"])
 
 
-@script()
+@script(resources=Resources(cpu_request="50m", memory_request="30Mi", cpu_limit="50m", memory_limit="30Mi"))
 def flip():
     import random
 
@@ -15,12 +15,12 @@ def flip():
     print(result)
 
 
-@script()
+@script(resources=Resources(cpu_request="50m", memory_request="30Mi", cpu_limit="50m", memory_limit="30Mi"))
 def heads():
     print("it was heads")
 
 
-@script()
+@script(resources=Resources(cpu_request="50m", memory_request="30Mi", cpu_limit="50m", memory_limit="30Mi"))
 def tails():
     print("it was tails")
 
