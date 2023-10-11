@@ -27,6 +27,8 @@ spec:
         value: "pipekit"
       - name: gh_repo
         value: "examples"
+      - name: pk_url
+        value: "https://pipekit.io"
   templates:
     - name: workflow
       dag:
