@@ -51,7 +51,7 @@ with Workflow(
             with_items=items,
         )
 # Submit the workflow to Pipekit
-pipe_run = pipekit.submit(w, "vcluster-test")
+pipe_run = pipekit.submit(w, "free-trial-cluster")
 
 # Optionally print the logs
 # pipekit.print_logs(pipe_run["uuid"], container_name="main")
