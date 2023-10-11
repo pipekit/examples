@@ -23,8 +23,16 @@ spec:
                 - name: type
                   value: "{{item.type}}"
             withItems:
-              - { label: "app.kubernetes.io/component=workflow-controller", hrname: "Argo Workflows", type: "deployment" }
-              - { label: "app.kubernetes.io/name=pipekit-agent", hrname: "Pipekit Agent", type: "deployment" }
+              - {
+                  label: "app.kubernetes.io/component=workflow-controller",
+                  hrname: "Argo Workflows",
+                  type: "deployment",
+                }
+              - {
+                  label: "app.kubernetes.io/name=pipekit-agent",
+                  hrname: "Pipekit Agent",
+                  type: "deployment",
+                }
               - { label: "app=minio", hrname: "Minio", type: "statefulset" }
 
     - name: kubernetes-version

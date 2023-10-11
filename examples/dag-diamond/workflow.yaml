@@ -13,22 +13,22 @@ spec:
           - name: A
             template: echo
             arguments:
-              parameters: [{name: message, value: A}]
+              parameters: [{ name: message, value: A }]
           - name: B
             dependencies: [A]
             template: echo
             arguments:
-              parameters: [{name: message, value: B}]
+              parameters: [{ name: message, value: B }]
           - name: C
             dependencies: [A]
             template: echo
             arguments:
-              parameters: [{name: message, value: C}]
+              parameters: [{ name: message, value: C }]
           - name: D
             dependencies: [B, C]
             template: echo
             arguments:
-              parameters: [{name: message, value: D}]
+              parameters: [{ name: message, value: D }]
 
     - name: echo
       inputs:
