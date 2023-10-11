@@ -1,0 +1,23 @@
+{
+    "ignorePaths": [
+        "**/ci/ci.yaml",
+        ".mega-linter.yaml",
+        ".gitignore"
+    ],
+    "language": "en",
+    "version": "0.2",
+    "words": [
+        "CronWorkflow",
+        "Hera",
+        "Minio",
+        "Pipekit",
+        "StatefulSet",
+        "argoproj",
+        "coinflip",
+        "dtzar",
+        "hrname",
+        "kubectl",
+        "listdir",
+        "spilts"
+    ]
+}

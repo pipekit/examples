@@ -38,7 +38,10 @@ with Workflow(
         command=[
             "/bin/bash",
             "-c",
-            'version=$(kubectl -n pipekit get {{inputs.parameters.type}} -l {{inputs.parameters.label}} -o=jsonpath="{..image}") && echo "{{inputs.parameters.hrname}}: $version"',
+            'version=$(kubectl -n pipekit get {{inputs.parameters.type}} \
+                    -l {{inputs.parameters.label}} \
+                    -o=jsonpath="{..image}") && \
+                    echo "{{inputs.parameters.hrname}}: $version"',
         ],
         inputs=[
             Parameter(name="label"),
@@ -50,7 +53,7 @@ with Workflow(
     with DAG(name="main"):
         kubernetes_version(name="kubernetes-version")
         kubectl_versions(
-            name="kubect-version-0",
+            name="kubectl-version-0",
             arguments={
                 "label": "{{item.label}}",
                 "hrname": "{{item.hrname}}",
