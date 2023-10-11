@@ -6,12 +6,14 @@ from pipekit_sdk.service import PipekitService
 # Obtain Pipekit Hera token from environment variable
 pipekit = PipekitService(token=os.environ["PIPEKIT_HERA_TOKEN"])
 
+
 @script()
 def flip():
     import random
 
     result = "heads" if random.randint(0, 1) == 0 else "tails"
     print(result)
+
 
 @script()
 def heads():

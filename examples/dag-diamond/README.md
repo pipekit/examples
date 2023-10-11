@@ -4,7 +4,7 @@
 
 This example workflow executes a basic diamond workflow:
 
-```
+```bash
    A
   / \
  B   C

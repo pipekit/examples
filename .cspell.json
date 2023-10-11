@@ -2,6 +2,7 @@
     "ignorePaths": [
         "**/ci/ci.yaml",
         ".mega-linter.yaml",
+        ".markdownlint.json",
         ".gitignore"
     ],
     "language": "en",
