@@ -242,9 +242,9 @@ spec:
           - name: tokenFile
             value: "/vault/secrets/ci-token"
           - name: organisation
-            value: "pipekit"
+            value: "{{workflow.parameters.gh_org}}"
           - name: app_repo
-            value: "pipeline-mono"
+            value: "{{workflow.parameters.gh_repo}}"
           - name: git_sha
             value: "{{inputs.parameters.git_sha}}"
         resources:
