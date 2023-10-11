@@ -54,7 +54,7 @@ spec:
         parameters:
           - name: numSpilts
       script:
-        image: python:alpine3.6
+        image: python:3.12-alpine3.18
         command:
           - python
         source: |
@@ -85,7 +85,7 @@ spec:
           - name: part
             path: /mnt/in/part.json
       script:
-        image: python:alpine3.6
+        image: python:3.12-alpine3.18
         command:
           - python
         source: |
@@ -124,7 +124,7 @@ spec:
             s3:
               key: "{{workflow.uid}}/results"
       script:
-        image: python:alpine3.6
+        image: python:3.12-alpine3.18
         command:
           - python
         source: |
