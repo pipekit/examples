@@ -13,7 +13,6 @@ def flip():
     result = "heads" if random.randint(0, 1) == 0 else "tails"
     print(result)
 
-
 @script()
 def heads():
     print("it was heads")
