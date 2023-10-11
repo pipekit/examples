@@ -1,6 +1,6 @@
 import os
 
-from hera.workflows import DAG, Container, Parameter, Workflow, Resources
+from hera.workflows import DAG, Container, Parameter, Resources, Workflow
 from pipekit_sdk.service import PipekitService
 
 # Obtain Pipekit Hera token from environment variable
@@ -30,7 +30,12 @@ with Workflow(
         name="kubernetes-version",
         image="dtzar/helm-kubectl:3.12.3",
         command=["/bin/bash", "-c", "kubectl version"],
-        resources=Resources(cpu_request="50m", memory_request="30Mi", cpu_limit="50m", memory_limit="30Mi"),
+        resources=Resources(
+            cpu_request="50m",
+            memory_request="30Mi",
+            cpu_limit="50m",
+            memory_limit="30Mi",
+        ),
     )
 
     kubectl_versions = Container(
@@ -44,7 +49,12 @@ with Workflow(
                     -o=jsonpath="{..image}") && \
                     echo "{{inputs.parameters.hrname}}: $version"',
         ],
-        resources=Resources(cpu_request="50m", memory_request="30Mi", cpu_limit="50m", memory_limit="30Mi"),
+        resources=Resources(
+            cpu_request="50m",
+            memory_request="30Mi",
+            cpu_limit="50m",
+            memory_limit="30Mi",
+        ),
         inputs=[
             Parameter(name="label"),
             Parameter(name="hrname"),
