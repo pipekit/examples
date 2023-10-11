@@ -1,0 +1,251 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: examples-ci-
+  namespace: ci
+spec:
+  entrypoint: workflow
+  synchronization:
+    semaphore:
+      configMapKeyRef:
+        name: workflows-semaphore
+        key: examples-ci
+  serviceAccountName: ci
+  volumeClaimTemplates:
+    - metadata:
+        name: workdir
+      spec:
+        accessModes: ["ReadWriteMany"]
+        storageClassName: nfs
+        resources:
+          requests:
+            storage: 1Gi
+
+  arguments:
+    parameters:
+      - name: gh_org
+        value: "pipekit"
+      - name: gh_repo
+        value: "examples"
+  templates:
+    - name: workflow
+      dag:
+        tasks:
+          - name: clone-repo
+            template: clone-repo
+          - name: get-pr
+            template: get-pr
+
+          - name: lint-repo
+            template: lint-repo
+            depends: clone-repo && get-pr
+          - name: notify-github-lint-repo-start
+            template: github-notifier
+            arguments:
+              parameters:
+                - name: git_sha
+                  value: "{{tasks.get-pr.outputs.parameters.sha}}"
+                - name: state
+                  value: "pending"
+                - name: context
+                  value: "Lint Repo"
+                - name: description
+                  value: "In progress — This check has started..."
+                - name: pipeUUID
+                  value: "{{tasks.get-pr.outputs.parameters.pipeUUID}}"
+                - name: runUUID
+                  value: "{{tasks.get-pr.outputs.parameters.runUUID}}"
+            depends: clone-repo && get-pr
+          - name: notify-github-lint-repo-success
+            template: github-notifier
+            arguments:
+              parameters:
+                - name: git_sha
+                  value: "{{tasks.get-pr.outputs.parameters.sha}}"
+                - name: state
+                  value: "success"
+                - name: context
+                  value: "Lint Repo"
+                - name: description
+                  value: "Passed"
+                - name: pipeUUID
+                  value: "{{tasks.get-pr.outputs.parameters.pipeUUID}}"
+                - name: runUUID
+                  value: "{{tasks.get-pr.outputs.parameters.runUUID}}"
+            depends: lint-repo.Succeeded && notify-github-lint-repo-start
+          - name: notify-github-lint-repo-fail
+            template: github-notifier
+            arguments:
+              parameters:
+                - name: git_sha
+                  value: "{{tasks.get-pr.outputs.parameters.sha}}"
+                - name: state
+                  value: "failure"
+                - name: context
+                  value: "Lint Repo"
+                - name: description
+                  value: "Failed"
+                - name: pipeUUID
+                  value: "{{tasks.get-pr.outputs.parameters.pipeUUID}}"
+                - name: runUUID
+                  value: "{{tasks.get-pr.outputs.parameters.runUUID}}"
+            depends: lint-repo.Failed && notify-github-lint-repo-start
+
+    - name: clone-repo
+      nodeSelector:
+        nodegroup: arm-spot
+      container:
+        image: pipekitdev/ci-alpine
+        imagePullPolicy: Always
+        command:
+          - sh
+          - -c
+          - |
+            eval `ssh-agent -s`
+            mkdir -p /workdir/{workflow.parameters.gh_org}}
+            cd /workdir/{{workflow.parameters.gh_org}}
+            ssh-add /root/.ssh/github_key
+            ssh-keyscan github.com > /root/.ssh/known_hosts
+            git config --global --add safe.directory '*'
+            git clone git@github.com:{{workflow.parameters.gh_org}}/{{workflow.parameters.gh_repo}}.git
+            cd {{workflow.parameters.gh_repo}}
+            git checkout $GIT_COMMIT
+        volumeMounts:
+          - name: workdir
+            mountPath: /workdir
+        resources:
+          requests:
+            memory: 1Gi
+            cpu: 100m
+
+    - name: lint-repo
+      container:
+        image: oxsecurity/megalinter:v7
+        command:
+          - /bin/bash
+          - -c
+          - |
+            echo "Retrieving git clone..." && cp -R /workdir/{{workflow.parameters.gh_org}}/{{workflow.parameters.gh_repo}} /tmp/lint
+            ./entrypoint.sh
+        volumeMounts:
+          - name: workdir
+            mountPath: /workdir
+        resources:
+          requests:
+            memory: 1Gi
+            cpu: 3
+
+    - name: get-pr
+      nodeSelector:
+        nodegroup: arm-spot
+      metadata:
+        annotations:
+          vault.hashicorp.com/agent-inject: "true"
+          vault.hashicorp.com/role: "argo"
+          vault.hashicorp.com/auth-path: "auth/runner"
+          vault.hashicorp.com/agent-pre-populate-only: "true"
+          vault.hashicorp.com/agent-inject-secret-ci-token: "infrastructure/data/renovate"
+          vault.hashicorp.com/agent-inject-template-ci-token: |
+            {{ with secret "infrastructure/data/renovate" -}}
+                export GITHUB_TOKEN="{{ .Data.data.github_PAT }}"
+            {{- end }}
+      container:
+        env:
+          - name: RUN_UUID
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.labels['workflows.pipekit.io/run_uuid']
+          - name: PIPE_UUID
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.labels['workflows.pipekit.io/pipe_uuid']
+        image: pipekitdev/ci-alpine
+        imagePullPolicy: Always
+        command:
+          - /bin/bash
+          - -c
+          - |
+            if [ "${isPR}" == "true" ]
+            then
+              . /vault/secrets/ci-token
+              curl \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              https://api.github.com/repos/{{workflow.parameters.gh_org}}/{{workflow.parameters.gh_repo}}/pulls \
+              | jq '. | [map(.) | .[] | select(.head.sha|IN(env.GIT_COMMIT))| {number, sha: .head.sha, headref: .head.ref, base: .base.sha, baseref: .base.ref}]' > /tmp/pr
+              cat /tmp/pr | jq -r '.[].number' > /tmp/pr_num
+              cat /tmp/pr | jq -r '.[].sha' > /tmp/sha
+            else
+              echo '[ { "number": "0000", "sha": "0000", "headref": "0000", "base": "0000", "baseref": "0000" } ]' > /tmp/pr
+              echo "master" > /tmp/pr_num
+              echo "0000" > /tmp/sha
+            fi
+
+            echo $PIPE_UUID > /tmp/pipeUUID
+            echo $RUN_UUID > /tmp/runUUID
+      outputs:
+        parameters:
+          - name: pr
+            valueFrom:
+              path: /tmp/pr
+          - name: pr_num
+            valueFrom:
+              path: /tmp/pr_num
+          - name: sha
+            valueFrom:
+              path: /tmp/sha
+          - name: pipeUUID
+            valueFrom:
+              path: /tmp/pipeUUID
+          - name: runUUID
+            valueFrom:
+              path: /tmp/runUUID
+
+    - name: github-notifier
+      nodeSelector:
+        nodegroup: arm-spot
+      metadata:
+        annotations:
+          vault.hashicorp.com/agent-inject: "true"
+          vault.hashicorp.com/role: "argo"
+          vault.hashicorp.com/auth-path: "auth/runner"
+          vault.hashicorp.com/agent-pre-populate-only: "true"
+          vault.hashicorp.com/agent-inject-secret-ci-token: "infrastructure/data/renovate"
+          vault.hashicorp.com/agent-inject-template-ci-token: |-
+            {{ with secret "infrastructure/data/renovate" -}}
+                {{ .Data.data.github_PAT }}
+            {{- end }}
+      inputs:
+        parameters:
+          - name: state
+          - name: description
+          - name: context
+          - name: git_sha
+          - name: pipeUUID
+          - name: runUUID
+      container:
+        image: ghcr.io/crumbhole/ci-github-notifier:v1.4.4
+        imagePullPolicy: Always
+        command:
+          - /go/bin/ci-github-notifier
+        env:
+          - name: state
+            value: "{{inputs.parameters.state}}"
+          - name: target_url
+            value: "{{workflow.parameters.pk_url}}/pipes/{{inputs.parameters.pipeUUID}}/runs/{{inputs.parameters.runUUID}}"
+          - name: description
+            value: "{{inputs.parameters.description}}"
+          - name: context
+            value: "{{inputs.parameters.context}}"
+          - name: tokenFile
+            value: "/vault/secrets/ci-token"
+          - name: organisation
+            value: "pipekit"
+          - name: app_repo
+            value: "pipeline-mono"
+          - name: git_sha
+            value: "{{inputs.parameters.git_sha}}"
+        resources:
+          requests:
+            memory: 64Mi
+            cpu: 250m
