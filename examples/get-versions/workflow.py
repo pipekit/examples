@@ -28,13 +28,13 @@ with Workflow(
 ) as w:
     kubernetes_version = Container(
         name="kubernetes-version",
-        image="dtzar/helm-kubectl",
+        image="dtzar/helm-kubectl:3.12.3",
         command=["/bin/bash", "-c", "kubectl version"],
     )
 
     kubectl_versions = Container(
         name="kubectl-version",
-        image="dtzar/helm-kubectl",
+        image="dtzar/helm-kubectl:3.12.3",
         command=[
             "/bin/bash",
             "-c",

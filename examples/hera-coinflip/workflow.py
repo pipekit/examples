@@ -6,7 +6,6 @@ from pipekit_sdk.service import PipekitService
 # Obtain Pipekit Hera token from environment variable
 pipekit = PipekitService(token=os.environ["PIPEKIT_HERA_TOKEN"])
 
-
 @script()
 def flip():
     import random
