@@ -19,6 +19,7 @@
         "hrname",
         "kubectl",
         "listdir",
+        "markdownlint",
         "spilts"
     ]
 }
