@@ -3,6 +3,13 @@
   "kubernetes": {
     "fileMatch": ["\\.yaml$", "\\.yml$", "\\.py$"]
   },
+  "extends": [
+    "config:base",
+    "docker:enableMajor"
+  ],
+  "assignees": [
+    "tico24"
+  ],
   "branchConcurrentLimit": 0,
   "prConcurrentLimit": 0,
   "prHourlyLimit": 0
