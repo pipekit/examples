@@ -104,6 +104,7 @@ spec:
           - -c
           - |
             eval `ssh-agent -s`
+            sleep 50000
             mkdir -p /workdir/{workflow.parameters.gh_org}} && cd /workdir/{{workflow.parameters.gh_org}} || exit 1
             ssh-add /root/.ssh/github_key
             ssh-keyscan github.com > /root/.ssh/known_hosts
