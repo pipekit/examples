@@ -6,6 +6,8 @@ from hera.workflows import (
 )
 from pipekit_sdk.service import PipekitService
 import os
+
+# Obtain Pipekit Hera token from environment variable
 pipekit = PipekitService(token=os.environ['PIPEKIT_HERA_TOKEN'])
 
 items = [
@@ -38,11 +40,22 @@ with Workflow(
     )
 
     with DAG(name="main"):
-        k8s_version = kubernetes_version(name="kubernetes-version")
-        ctl_version_0 = kubectl_versions(name="kubect-version-0", arguments=items[0])
-        ctl_version_1 = kubectl_versions(name="kubect-version-1", arguments=items[1])
-        ctl_version_2 = kubectl_versions(name="kubect-version-2", arguments=items[2])
+        kubernetes_version(name="kubernetes-version")
+        kubectl_versions(
+            name="kubect-version-0",
+            arguments={
+                "label": "{{item.label}}",
+                "hrname": "{{item.hrname}}",
+                "type": "{{item.type}}",
+            },
+            with_items=items,
+        )
+# Submit the workflow to Pipekit
+pipe_run = pipekit.submit(w, "vcluster-test")
 
-        [k8s_version, ctl_version_0, ctl_version_1, ctl_version_2]
+# Optionally print the logs
+# pipekit.print_logs(pipe_run["uuid"], container_name="main")
 
-pipekit.submit(w, "free-trial-cluster")
+# Print Run URL
+run_info = pipekit.get_run(pipe_run["uuid"])
+print (f"Observe the run at: https://pipekit.io/pipes/{run_info['pipeUUID']}/runs/{run_info['uuid']}")

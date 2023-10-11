@@ -3,6 +3,7 @@ from hera.shared import global_config
 from pipekit_sdk.service import PipekitService
 
 import os
+# Obtain Pipekit Hera token from environment variable
 pipekit = PipekitService(token=os.environ['PIPEKIT_HERA_TOKEN'])
 
 @script()
@@ -26,4 +27,12 @@ with Workflow(generate_name="coinflip-", entrypoint="d", namespace="argo", servi
         heads().on_other_result(f, "heads")
         tails().on_other_result(f, "tails")
 
-pipekit.submit(w, "free-trial-cluster")
+# Submit the workflow to Pipekit
+pipe_run = pipekit.submit(w, "free-trial-cluster")
+
+# Optionally print the logs
+# pipekit.print_logs(pipe_run["uuid"], container_name="main")
+
+# Print Run URL
+run_info = pipekit.get_run(pipe_run["uuid"])
+print (f"Observe the run at: https://pipekit.io/pipes/{run_info['pipeUUID']}/runs/{run_info['uuid']}")
