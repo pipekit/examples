@@ -38,7 +38,7 @@ spec:
 
     - name: kubernetes-version
       container:
-        image: dtzar/helm-kubectl:3.12.3
+        image: dtzar/helm-kubectl:3.13.0
         command:
           - /bin/bash
           - -c
@@ -52,7 +52,7 @@ spec:
           - name: hrname
           - name: type
       container:
-        image: dtzar/helm-kubectl:3.12.3
+        image: dtzar/helm-kubectl:3.13.0
         command:
           - /bin/bash
           - -c
