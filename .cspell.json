@@ -22,6 +22,6 @@
         "listdir",
         "markdownlint",
         "spilts",
-        "templ"
+        "tmpl"
     ]
 }
