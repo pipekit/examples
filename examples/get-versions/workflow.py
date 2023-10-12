@@ -17,7 +17,10 @@ items = [
         "hrname": "Pipekit Agent",
         "type": "deployment",
     },
-    {"label": "app=minio", "hrname": "Minio", "type": "statefulset"},
+    {   "label": "app=minio",
+        "hrname": "Minio",
+        "type": "statefulset"
+    },
 ]
 
 with Workflow(
