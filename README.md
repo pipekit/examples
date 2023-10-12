@@ -4,11 +4,13 @@
 
 A collection of examples designed to help you get started with Pipekit. All these examples will work out-of-the-box with the [Pipekit Getting Started guide](https://docs.pipekit.io/getting-started).
 
+You are encouraged to fork the repo and experiment with adjusting the workflows to suit your needs.
+
 ## Getting Started
 
-1. Create a free trial account at [pipekit.io](https://pipekit.io).
-2. Fork this repository and connect your fork to Pipekit.
-3. Tweak the examples as instructed by each README and run them in your cluster using Pipekit.
+1. Create a free trial account at [pipekit.io](https://pipekit.io/signup).
+2. The `README.md` accompanying each example will tell you how to run it from your terminal using the [Pipekit CLI](https://docs.pipekit.io/cli).
+3. If you want to experiment with git [run conditions](https://docs.pipekit.io/pipekit/pipes/managing-pipes/run-conditions), fork this repository and connect your fork to Pipekit.
 
 ## Examples
 
