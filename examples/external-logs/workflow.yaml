@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: job-logs-
+  namespace: argo
+spec:
+  entrypoint: helloworld-tmpl
+  serviceAccountName: argo-workflow
+  templates:
+    - name: helloworld-tmpl
+      resource:
+        action: create
+        setOwnerReference: true
+        successCondition: status.succeeded > 0
+        failureCondition: status.failed > 3
+        manifest: |
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            generateName: helloworld-job-
+          spec:
+            template:
+              metadata:
+                name: helloworld
+                labels:
+                  workflows.argoproj.io/workflow: {{workflow.name}}
+              spec:
+                containers:
+                - name: helloworld
+                  image: alpine
+                  command: ["sh", "-c"]
+                  args: [ "echo \"hello world\"" ]
+                restartPolicy: Never
+            backoffLimit: 4

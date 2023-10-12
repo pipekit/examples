@@ -16,6 +16,7 @@ A collection of examples designed to help you get started with Pipekit. All thes
 |----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
 | [cronworkflow-example]( examples/cronworkflow-example/ ) | Runs a basic CronWorkflow.                                                                                                                 |
 | [dag-diamond]( examples/dag-diamond/ )                   | Runs a basic DAG Workflow.                                                                                                                 |
+| [external-logs]( examples/external-logs/ )               | Workflows deploys a kubernetes job. You can see the logs from the job within Pipekit.                                                      |
 | [fan-out-fan-in]( examples/fan-out-fan-in/ )             | Shows how S3 artifact processing can be parallelized with Argo Workflows using a fan-out approach.                                         |
 | [get-versions](examples/get-versions/)                   | A workflow that outputs the versions of software installed in a Pipekit free trial cluster. Available as both a Hera and a native Workflow |
 | [hera-coinflip](examples/hera-coinflip/)                 | Runs a basic coinflip example using the Hera Python framework.                                                                             |

@@ -3,7 +3,8 @@
         "**/ci/ci.yaml",
         ".mega-linter.yaml",
         ".markdownlint.json",
-        ".gitignore"
+        ".gitignore",
+        "renovate.json"
     ],
     "language": "en",
     "version": "0.2",
@@ -16,10 +17,12 @@
         "argoproj",
         "coinflip",
         "dtzar",
+        "helloworld",
         "hrname",
         "kubectl",
         "listdir",
         "markdownlint",
-        "spilts"
+        "spilts",
+        "tmpl"
     ]
 }
