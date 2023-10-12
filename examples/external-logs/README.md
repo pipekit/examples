@@ -16,3 +16,6 @@ pipekit login
 ```bash
 pipekit submit -w --cluster-name=free-trial-cluster --pipe-name=external-logs-example workflow.yaml
 ```
+
+
+pipekit submit -w --cluster-name=vcluster-test --pipe-name=zzzexternal-logs-example workflow.yaml
