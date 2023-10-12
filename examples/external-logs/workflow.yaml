@@ -4,10 +4,10 @@ metadata:
   generateName: job-logs-
   namespace: argo
 spec:
-  entrypoint: helloworld-tmpl
+  entrypoint: hellopipekit
   serviceAccountName: argo-workflow
   templates:
-    - name: helloworld-tmpl
+    - name: hellopipekit
       resource:
         action: create
         setOwnerReference: true
@@ -17,18 +17,18 @@ spec:
           apiVersion: batch/v1
           kind: Job
           metadata:
-            generateName: helloworld-job-
+            generateName: hellopipekit-job-
           spec:
             template:
               metadata:
-                name: helloworld
+                name: hellopipekit
                 labels:
                   workflows.argoproj.io/workflow: {{workflow.name}}
               spec:
                 containers:
-                - name: helloworld
-                  image: alpine
+                - name: hellopipekit
+                  image: alpine:3.18
                   command: ["sh", "-c"]
-                  args: [ "echo \"hello world\"" ]
+                  args: [ "echo \"Hello Pipekit!\"" ]
                 restartPolicy: Never
             backoffLimit: 4
