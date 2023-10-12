@@ -3,7 +3,8 @@
         "**/ci/ci.yaml",
         ".mega-linter.yaml",
         ".markdownlint.json",
-        ".gitignore"
+        ".gitignore",
+        "renovate.json"
     ],
     "language": "en",
     "version": "0.2",
