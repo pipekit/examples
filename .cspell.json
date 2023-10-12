@@ -16,10 +16,12 @@
         "argoproj",
         "coinflip",
         "dtzar",
+        "helloworld",
         "hrname",
         "kubectl",
         "listdir",
         "markdownlint",
-        "spilts"
+        "spilts",
+        "templ"
     ]
 }
