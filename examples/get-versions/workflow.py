@@ -84,6 +84,10 @@ pipe_run = pipekit.submit(w, "free-trial-cluster")
 
 # Print Run URL
 run_info = pipekit.get_run(pipe_run["uuid"])
+if "PIPEKIT_URL" in os.environ:
+    pipekit_url = os.environ["PIPEKIT_URL"]
+else:
+    pipekit_url = "https://pipekit.io"
 print(
-    f"Observe the run at: https://pipekit.io/pipes/{run_info['pipeUUID']}/runs/{run_info['uuid']}"
+    f"Observe the run at: {pipekit_url}/pipes/{run_info['pipeUUID']}/runs/{run_info['uuid']}"
 )
