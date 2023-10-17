@@ -49,7 +49,7 @@ with Workflow(
         tails().on_other_result(f, "tails")
 
 # Submit the workflow to Pipekit
-pipe_run = pipekit.submit(w, "vcluster")
+pipe_run = pipekit.submit(w, "free-trial-cluster")
 
 # Optionally print the logs
 # pipekit.print_logs(pipe_run["uuid"], container_name="main")
