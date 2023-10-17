@@ -4,7 +4,8 @@
         ".mega-linter.yaml",
         ".markdownlint.json",
         ".gitignore",
-        "renovate.json"
+        "renovate.json",
+        ".ruff.toml"
     ],
     "language": "en",
     "version": "0.2",
