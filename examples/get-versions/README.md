@@ -27,4 +27,4 @@ python workflow.py
 ```
 
 ### Change the cluster name
-If you're using a different cluster name, modify `free-trial-cluster` on the last line of `workflow.py`.
+If you're using a different cluster name, modify `free-trial-cluster` in the line `pipe_run = pipekit.submit(w, "free-trial-cluster")` of `workflow.py`.
