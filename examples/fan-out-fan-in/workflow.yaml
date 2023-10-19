@@ -7,8 +7,8 @@ metadata:
   annotations:
     # workflows.argoproj.io/description: |
     #  This workflow demonstrates map-reduce using "key-only" artifacts.
-    #  The first task "split" produces a number of parts, each in the form of a JSON document, saving it to a bucket.
-    #  Each "map" task then reads those documents, performs a map operation, and writes them out to a new bucket.
+    #  The first task "divide" produces a number of parts, each in the form of a JSON document, saving it to a bucket.
+    #  Each "mapping" task then reads those documents, performs a map operation, and writes them out to a new bucket.
     #  Finally, "reduce" merges all the mapped documents into a final document.
     workflows.argoproj.io/version: ">= 3.4.0"
 spec:
@@ -24,13 +24,13 @@ spec:
     - name: main
       dag:
         tasks:
-          - name: split
+          - name: divide
             template: split
             arguments:
               parameters:
                 - name: numSpilts
                   value: "{{workflow.parameters.numSpilts}}"
-          - name: map
+          - name: mapping
             template: map
             arguments:
               parameters:
@@ -40,11 +40,11 @@ spec:
                 - name: part
                   s3:
                     key: "{{workflow.uid}}/parts/{{item}}.json"
-            depends: "split"
+            depends: "divide"
             withParam: "{{tasks.split.outputs.result}}"
           - name: reduce
             template: reduce
-            depends: "map"
+            depends: "mapping"
     # The `split` task creates a number of "parts". Each part has a unique ID (index).
     # This task writes one "part file" for each of pieces of processing that needs doing, into to single directory
     # which is then saved as an output artifact.
