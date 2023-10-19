@@ -77,3 +77,4 @@ if pipe_status['status'] != "completed":
     sys.exit(1)
 else:
     print(f"Workflow status: {pipe_status['status']}")
+    sys.exit(0)
