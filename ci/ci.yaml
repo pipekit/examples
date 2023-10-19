@@ -285,6 +285,10 @@ spec:
             ## Versions
             cd /workdir/pipekit/examples/examples/get-versions
             python workflow.py
+
+            ## hera-coinflip
+            cd /workdir/pipekit/examples/examples/hera-coinflip
+            python workflow.py
         volumeMounts:
           - name: workdir
             mountPath: /workdir
