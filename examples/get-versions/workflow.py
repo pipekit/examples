@@ -81,9 +81,6 @@ with Workflow(
 # Submit the workflow to Pipekit
 pipe_run = pipekit.submit(w, "free-trial-cluster")
 
-## Optionally set the run UUID to an environment variable
-os.environ["PIPEKIT_RUN_UUID"] = pipe_run["uuid"]
-
 # Print Run URL
 run_info = pipekit.get_run(pipe_run["uuid"])
 if "PIPEKIT_URL" in os.environ:
