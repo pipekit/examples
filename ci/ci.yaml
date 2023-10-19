@@ -39,6 +39,10 @@ spec:
           - name: get-pr
             template: get-pr
 
+          - name: trigger-hera
+            template: trigger-hera
+            depends: clone-repo && get-pr
+
           - name: lint-repo
             template: lint-repo
             depends: clone-repo && get-pr
@@ -251,3 +255,40 @@ spec:
           requests:
             memory: 64Mi
             cpu: 250m
+
+    - name: trigger-hera
+      metadata:
+        annotations:
+          vault.hashicorp.com/agent-inject: "true"
+          vault.hashicorp.com/role: "argo"
+          vault.hashicorp.com/auth-path: "auth/runner"
+          vault.hashicorp.com/agent-pre-populate-only: "true"
+          vault.hashicorp.com/agent-inject-secret-pk-user: "infrastructure/data/pipekit/ciuser"
+          vault.hashicorp.com/agent-inject-template-pk-user: |
+            {{ with secret "infrastructure/data/pipekit/ciuser" -}}
+                export PIPEKIT_USERNAME="{{ .Data.data.username }}"
+                export PIPEKIT_PASSWORD="{{ .Data.data.password }}"
+            {{- end }}
+      container:
+        image: pipekit13/cli
+        command:
+          - sh
+          - -c
+          - |
+            apk add --no-cache python3 py3-pip
+            pip install pipekit-sdk
+
+            source /vault/secrets/pk-user
+            pipekit login
+            export PIPEKIT_HERA_TOKEN=$(pipekit hera -r)
+
+            ## Versions
+            cd /workdir/examples/examples/get-versions
+            python workflow.py
+        volumeMounts:
+          - name: workdir
+            mountPath: /workdir
+        resources:
+          requests:
+            memory: 1Gi
+            cpu: 200m
