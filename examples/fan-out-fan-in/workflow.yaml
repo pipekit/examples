@@ -10,7 +10,7 @@ metadata:
     #  The first task "divide" produces a number of parts, each in the form of a JSON document, saving it to a bucket.
     #  Each "mapping" task then reads those documents, performs a map operation, and writes them out to a new bucket.
     #  Finally, "reduce" merges all the mapped documents into a final document.
-    workflows.argoproj.io/version: ">= 3.5.0"
+    workflows.argoproj.io/version: ">= 3.4.0"
 spec:
   entrypoint: main
   serviceAccountName: argo-workflow
@@ -41,7 +41,7 @@ spec:
                   s3:
                     key: "{{workflow.uid}}/parts/{{item}}.json"
             depends: "divide"
-            withParam: "{{tasks.split.outputs.result}}"
+            withParam: "{{tasks.divide.outputs.result}}"
           - name: reduce
             template: reduce
             depends: "mapping"
