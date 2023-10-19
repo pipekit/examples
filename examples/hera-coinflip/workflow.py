@@ -1,4 +1,6 @@
 import os
+import time
+import sys
 
 from hera.workflows import DAG, Resources, Workflow, script
 from pipekit_sdk.service import PipekitService
@@ -51,9 +53,6 @@ with Workflow(
 # Submit the workflow to Pipekit
 pipe_run = pipekit.submit(w, "free-trial-cluster")
 
-# Optionally print the logs
-# pipekit.print_logs(pipe_run["uuid"], container_name="main")
-
 # Print Run URL
 run_info = pipekit.get_run(pipe_run["uuid"])
 if "PIPEKIT_URL" in os.environ:
@@ -63,3 +62,19 @@ else:
 print(
     f"Observe the run at: {pipekit_url}/pipes/{run_info['pipeUUID']}/runs/{run_info['uuid']}"
 )
+
+# Wait for the workflow to complete
+pipe_status = pipekit.get_run(pipe_run["uuid"])
+pipe_states = ["completed", "failed", "stopped", "terminated"]
+
+while pipe_status['status'] not in pipe_states:
+    time.sleep(5)
+    pipe_status = pipekit.get_run(pipe_run["uuid"])
+
+# Throw non-zero exit code if workflow failed
+if pipe_status['status'] != "completed":
+    print(f"Exiting - Workflow status: {pipe_status['status']}")
+    sys.exit(1)
+else:
+    print(f"Workflow status: {pipe_status['status']}")
+    sys.exit(0)

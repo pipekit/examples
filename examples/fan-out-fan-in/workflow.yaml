@@ -41,7 +41,7 @@ spec:
                   s3:
                     key: "{{workflow.uid}}/parts/{{item}}.json"
             depends: "divide"
-            withParam: "{{tasks.split.outputs.result}}"
+            withParam: "{{tasks.divide.outputs.result}}"
           - name: reduce
             template: reduce
             depends: "mapping"
