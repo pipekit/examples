@@ -46,7 +46,7 @@ spec:
                 - name: name
                   value: "{{item.name}}"
             withItems:
-              - {name: "hera-coinflp"}
+              - {name: "hera-coinflip"}
               - {name: "get-versions"}
             depends: clone-repo && get-pr
           - name: notify-github-trigger-hera-start
