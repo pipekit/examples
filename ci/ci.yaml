@@ -21,6 +21,7 @@ spec:
         resources:
           requests:
             storage: 1Gi
+
   arguments:
     parameters:
       - name: gh_org
