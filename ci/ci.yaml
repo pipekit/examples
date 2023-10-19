@@ -39,7 +39,7 @@ spec:
           - name: get-pr
             template: get-pr
 
-          - name: trigger-hera-coinflip
+          - name: trigger-hera
             template: trigger-hera
             depends: clone-repo && get-pr
           - name: notify-github-trigger-hera-start
