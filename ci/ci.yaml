@@ -282,10 +282,8 @@ spec:
             pipekit login
             export PIPEKIT_HERA_TOKEN=$(pipekit hera -r)
 
-            sleep 500000
-
             ## Versions
-            cd /workdir/examples/examples/get-versions
+            cd /workdir/pipekit/examples/examples/get-versions
             python workflow.py
         volumeMounts:
           - name: workdir

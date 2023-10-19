@@ -79,8 +79,8 @@ with Workflow(
 # Submit the workflow to Pipekit
 pipe_run = pipekit.submit(w, "free-trial-cluster")
 
-# Optionally print the logs
-# pipekit.print_logs(pipe_run["uuid"], container_name="main")
+## Optionally set the run UUID to an environment variable
+os.environ["PIPEKIT_RUN_UUID"] = pipe_run["uuid"]
 
 # Print Run URL
 run_info = pipekit.get_run(pipe_run["uuid"])
@@ -91,3 +91,6 @@ else:
 print(
     f"Observe the run at: {pipekit_url}/pipes/{run_info['pipeUUID']}/runs/{run_info['uuid']}"
 )
+
+# Wait for the workflow to complete
+pipekit.get_run(pipe_run["uuid"])
