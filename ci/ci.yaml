@@ -343,6 +343,8 @@ spec:
             pipekit login
             export PIPEKIT_HERA_TOKEN=$(pipekit hera -r)
 
+            sleep 6
+
             ## Trigger Hera pipe
             echo "Triggering Hera {{inputs.parameters.name}} pipe..."
             cd /workdir/{{workflow.parameters.gh_org}}/{{workflow.parameters.gh_repo}}/examples/{{inputs.parameters.name}} || exit 1
