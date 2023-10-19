@@ -41,7 +41,65 @@ spec:
 
           - name: trigger-hera
             template: trigger-hera
+            arguments:
+              parameters:
+                - name: name
+                  value: "hera"
+            withItems:
+              - {name: "hera-coinflp"}
+              - {name: "get-versions"}
             depends: clone-repo && get-pr
+          - name: notify-github-trigger-hera-start
+            template: github-notifier
+            arguments:
+              parameters:
+                - name: git_sha
+                  value: "{{tasks.get-pr.outputs.parameters.sha}}"
+                - name: state
+                  value: "pending"
+                - name: context
+                  value: "Trigger Hera Pipes"
+                - name: description
+                  value: "In progress — This check has started..."
+                - name: pipeUUID
+                  value: "{{tasks.get-pr.outputs.parameters.pipeUUID}}"
+                - name: runUUID
+                  value: "{{tasks.get-pr.outputs.parameters.runUUID}}"
+            depends: clone-repo && get-pr
+          - name: notify-github-trigger-hera-success
+            template: github-notifier
+            arguments:
+              parameters:
+                - name: git_sha
+                  value: "{{tasks.get-pr.outputs.parameters.sha}}"
+                - name: state
+                  value: "success"
+                - name: context
+                  value: "Trigger Hera Pipes"
+                - name: description
+                  value: "Passed"
+                - name: pipeUUID
+                  value: "{{tasks.get-pr.outputs.parameters.pipeUUID}}"
+                - name: runUUID
+                  value: "{{tasks.get-pr.outputs.parameters.runUUID}}"
+            depends: trigger-hera.Succeeded && notify-github-trigger-hera-start
+          - name: notify-github-trigger-hera-fail
+            template: github-notifier
+            arguments:
+              parameters:
+                - name: git_sha
+                  value: "{{tasks.get-pr.outputs.parameters.sha}}"
+                - name: state
+                  value: "failure"
+                - name: context
+                  value: "Trigger Hera Pipes"
+                - name: description
+                  value: "Failed"
+                - name: pipeUUID
+                  value: "{{tasks.get-pr.outputs.parameters.pipeUUID}}"
+                - name: runUUID
+                  value: "{{tasks.get-pr.outputs.parameters.runUUID}}"
+            depends: trigger-hera.Failed && notify-github-trigger-hera-start
 
           - name: lint-repo
             template: lint-repo
@@ -257,6 +315,9 @@ spec:
             cpu: 250m
 
     - name: trigger-hera
+      inputs:
+        parameters:
+          - name: name
       metadata:
         annotations:
           vault.hashicorp.com/agent-inject: "true"
@@ -282,17 +343,14 @@ spec:
             pipekit login
             export PIPEKIT_HERA_TOKEN=$(pipekit hera -r)
 
-            ## Versions
-            cd /workdir/pipekit/examples/examples/get-versions
-            python workflow.py
-
-            ## hera-coinflip
-            cd /workdir/pipekit/examples/examples/hera-coinflip
+            ## Trigger Hera pipe
+            echo "Triggering Hera {{inputs.parameters.name}} pipe..."
+            cd /workdir/{{workflow.parameters.gh_org}}/{{workflow.parameters.gh_repo}}/examples/{{inputs.parameters.name}}
             python workflow.py
         volumeMounts:
           - name: workdir
             mountPath: /workdir
         resources:
           requests:
-            memory: 1Gi
+            memory: 100Mi
             cpu: 200m
