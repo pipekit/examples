@@ -345,7 +345,8 @@ spec:
 
             ## Trigger Hera pipe
             echo "Triggering Hera {{inputs.parameters.name}} pipe..."
-            cd /workdir/{{workflow.parameters.gh_org}}/{{workflow.parameters.gh_repo}}/examples/{{inputs.parameters.name}}
+            sleep 50000
+            cd /workdir/{{workflow.parameters.gh_org}}/{{workflow.parameters.gh_repo}}/examples/{{inputs.parameters.name}} || exit 1
             python workflow.py
         volumeMounts:
           - name: workdir

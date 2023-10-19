@@ -36,10 +36,10 @@ with Workflow(
         image="dtzar/helm-kubectl:3.12.3",
         command=["/bin/bash", "-c", "kubectl version"],
         resources=Resources(
-            cpu_request="50m",
-            memory_request="30Mi",
-            cpu_limit="50m",
-            memory_limit="30Mi",
+            cpu_request="100m",
+            memory_request="100Mi",
+            cpu_limit="100m",
+            memory_limit="100Mi",
         ),
     )
 
@@ -55,10 +55,10 @@ with Workflow(
                     echo "{{inputs.parameters.hrname}}: $version"',
         ],
         resources=Resources(
-            cpu_request="50m",
-            memory_request="30Mi",
-            cpu_limit="50m",
-            memory_limit="30Mi",
+            cpu_request="100m",
+            memory_request="100Mi",
+            cpu_limit="100m",
+            memory_limit="100Mi",
         ),
         inputs=[
             Parameter(name="label"),
