@@ -5,14 +5,10 @@
     "docker:enableMajor"
   ],
   "kubernetes": {
-    "fileMatch": ["\\.yaml$", "\\.yml$", "\\.py$"]
+    "fileMatch": ["\\.yaml$", "\\.yml$", "\\.py$", "examples/cronworkflow-example/workflow\\.yaml$"]
   },
   "assignees": [
     "tico24"
-  ],
-  "includePaths": [
-    "**/ci/**",
-    "**/examples/**"
   ],
   "branchConcurrentLimit": 0,
   "prConcurrentLimit": 0,
