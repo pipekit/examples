@@ -5,7 +5,7 @@
     "docker:enableMajor"
   ],
   "kubernetes": {
-    "fileMatch": ["\\.yaml$", "\\.yml$", "\\.py$"]
+    "fileMatch": ["\\.yaml$", "\\.yml$"]
   },
   "assignees": [
     "tico24"
