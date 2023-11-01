@@ -5,10 +5,14 @@
     "docker:enableMajor"
   ],
   "kubernetes": {
-    "fileMatch": ["\\.yaml$", "\\.yml$"]
+    "fileMatch": ["\\.yaml$", "\\.yml$", "\\.py$"]
   },
   "assignees": [
     "tico24"
+  ],
+  "includePaths": [
+    "**/ci/**",
+    "**/examples/**"
   ],
   "branchConcurrentLimit": 0,
   "prConcurrentLimit": 0,
