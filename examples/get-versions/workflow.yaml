@@ -43,7 +43,8 @@ spec:
           - /bin/bash
           - -c
           - |
-            kubectl version
+            # '--short' is deprecated, but it shouts at you if you don't use it. So for now, we still use it.
+            kubectl version --short
         resources:
           requests:
             memory: "100Mi"
