@@ -38,13 +38,12 @@ spec:
 
     - name: kubernetes-version
       container:
-        image: dtzar/helm-kubectl:3.13.0
+        image: dtzar/helm-kubectl:3.13.1
         command:
           - /bin/bash
           - -c
           - |
-            # '--short' is deprecated, but it shouts at you if you don't use it. So for now, we still use it.
-            kubectl version --short
+            kubectl version
         resources:
           requests:
             memory: "100Mi"
@@ -60,7 +59,7 @@ spec:
           - name: hrname
           - name: type
       container:
-        image: dtzar/helm-kubectl:3.13.0
+        image: dtzar/helm-kubectl:3.13.1
         command:
           - /bin/bash
           - -c

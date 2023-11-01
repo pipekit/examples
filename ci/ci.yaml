@@ -159,12 +159,9 @@ spec:
           - sh
           - -c
           - |
-            eval `ssh-agent -s`
             mkdir -p /workdir/{{workflow.parameters.gh_org}} && cd /workdir/{{workflow.parameters.gh_org}} || exit 1
-            ssh-add /root/.ssh/github_key
-            ssh-keyscan github.com > /root/.ssh/known_hosts
             git config --global --add safe.directory '*'
-            git clone git@github.com:{{workflow.parameters.gh_org}}/{{workflow.parameters.gh_repo}}.git
+            git clone https://github.com/{{workflow.parameters.gh_org}}/{{workflow.parameters.gh_repo}}.git
             cd {{workflow.parameters.gh_repo}}
             git checkout $GIT_COMMIT
         volumeMounts:
