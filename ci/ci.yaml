@@ -159,8 +159,7 @@ spec:
           - sh
           - -c
           - |
-            set -e
-            mkdir -p /workdir/{{workflow.parameters.gh_org}} && cd /workdir/{{workflow.parameters.gh_org}}
+            mkdir -p /workdir/{{workflow.parameters.gh_org}} && cd /workdir/{{workflow.parameters.gh_org}} || exit 1
             git config --global --add safe.directory '*'
             git clone https://github.com/{{workflow.parameters.gh_org}}/{{workflow.parameters.gh_repo}}.git
             cd {{workflow.parameters.gh_repo}}
