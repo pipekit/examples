@@ -8,7 +8,7 @@
       "customType": "regex",
       "fileMatch": ["^workflow.py$"],
       "matchStrings": [".*image=\"(?<currentValue>.*?)\""],
-      "depNameTemplate": "kubernetes",
+      "depNameTemplate": "dtzar/helm-kubectl",
       "datasourceTemplate": "docker"
     }
   ],
