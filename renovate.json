@@ -3,11 +3,11 @@
   "kubernetes": {
     "fileMatch": ["\\.yaml$", "\\.yml$"]
   },
-  "customManagers": [
+  "regexManagers": [
     {
-      "customType": "regex",
-      "fileMatch": ["^workflow.py$"],
+      "fileMatch": ["workflow.py$"],
       "matchStrings": [".*image=\"(?<currentValue>.*?)\""],
+      "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}",
       "depNameTemplate": "dtzar/helm-kubectl",
       "datasourceTemplate": "docker"
     }
