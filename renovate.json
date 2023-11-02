@@ -3,12 +3,13 @@
   "kubernetes": {
     "fileMatch": ["\\.yaml$", "\\.yml$"]
   },
-  "regexManagers": [
+  "customManagers": [
     {
-      "fileMatch": ["workflow.py$"],
-      "matchStrings": [
-        "\\image=\"(?<currentValue>.*)\"/[^\\s]*"
-      ]
+      "customType": "regex",
+      "fileMatch": ["^workflow.py$"],
+      "matchStrings": ["image=\"(?<currentValue>.*?)\""],
+      "depNameTemplate": "kubernetes",
+      "datasourceTemplate": "docker"
     }
   ],
   "branchConcurrentLimit": 0,
