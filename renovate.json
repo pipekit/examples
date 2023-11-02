@@ -7,7 +7,7 @@
     {
       "customType": "regex",
       "fileMatch": ["^workflow.py$"],
-      "matchStrings": ["image=\"(?<currentValue>.*?)\""],
+      "matchStrings": [".*image=\"(?<currentValue>.*?)\""],
       "depNameTemplate": "kubernetes",
       "datasourceTemplate": "docker"
     }
