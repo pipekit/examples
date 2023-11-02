@@ -6,9 +6,8 @@
   "regexManagers": [
     {
       "fileMatch": ["workflow.py$"],
-      "matchStrings": [".*image=\"dtzar/helm-kubectl:(?<currentValue>.*?)\""],
+      "matchStrings": [".*image=\"(?<depName>.*?):(?<currentValue>.*?)\""],
       "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}",
-      "depNameTemplate": "dtzar/helm-kubectl",
       "datasourceTemplate": "docker"
     }
   ],
