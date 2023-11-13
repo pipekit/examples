@@ -33,7 +33,7 @@ with Workflow(
 ) as w:
     kubernetes_version = Container(
         name="kubernetes-version",
-        image="dtzar/helm-kubectl:3.13.1",
+        image="dtzar/helm-kubectl:3.13.2",
         command=["/bin/bash", "-c", "kubectl version"],
         resources=Resources(
             cpu_request="100m",
@@ -45,7 +45,7 @@ with Workflow(
 
     kubectl_versions = Container(
         name="kubectl-version",
-        image="dtzar/helm-kubectl:3.13.1",
+        image="dtzar/helm-kubectl:3.13.2",
         command=[
             "/bin/bash",
             "-c",
