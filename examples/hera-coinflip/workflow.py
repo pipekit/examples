@@ -1,6 +1,6 @@
 import os
-import time
 import sys
+import time
 
 from hera.workflows import DAG, Resources, Workflow, script
 from pipekit_sdk.service import PipekitService

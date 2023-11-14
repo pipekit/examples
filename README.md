@@ -23,5 +23,3 @@ You are encouraged to fork the repo and experiment with adjusting the workflows 
 | [get-versions](examples/get-versions/)                   | A workflow that outputs the versions of software installed in a Pipekit free trial cluster. Available as both a Hera and a native Workflow |
 | [hera-coinflip](examples/hera-coinflip/)                 | Runs a basic coinflip example using the Hera Python framework.                                                                             |
 |                                                          |                                                                                                                                            |
-
-DO NOT MERGE
