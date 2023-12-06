@@ -96,6 +96,14 @@ spec:
 
           - name: lint-repo
             template: lint-repo
+            arguments:
+              parameters:
+                - name: git_sha
+                  value: "{{tasks.get-pr.outputs.parameters.sha}}"
+                - name: pipeUUID
+                  value: "{{tasks.get-pr.outputs.parameters.pipeUUID}}"
+                - name: runUUID
+                  value: "{{tasks.get-pr.outputs.parameters.runUUID}}"
             depends: clone-repo && get-pr
           - name: notify-github-lint-repo-start
             template: github-notifier
@@ -173,13 +181,43 @@ spec:
             cpu: 100m
 
     - name: lint-repo
+      metadata:
+        annotations:
+          vault.hashicorp.com/agent-inject: "true"
+          vault.hashicorp.com/role: "argo"
+          vault.hashicorp.com/auth-path: "auth/runner"
+          vault.hashicorp.com/agent-pre-populate-only: "true"
+          vault.hashicorp.com/agent-inject-secret-ci-token: "infrastructure/data/renovate"
+          vault.hashicorp.com/agent-inject-template-ci-token: |
+            {{ with secret "infrastructure/data/renovate" -}}
+                export GITHUB_TOKEN="{{ .Data.data.github_PAT }}"
+            {{- end }}
       container:
-        image: oxsecurity/megalinter:v7
+        image: oxsecurity/megalinter-python:v7
+        env:
+          - name: GITHUB_SHA
+            value: "{{inputs.parameters.git_sha}}"
+          - name: GITHUB_API_URL
+            value: "https://api.github.com"
+          - name: GITHUB_REPOSITORY
+            value: "{{workflow.parameters.gh_org}}/{{workflow.parameters.gh_repo}}"
+          - name: CI_ACTION_RUN_URL
+            value: "{{workflow.parameters.pk_url}}/pipes/{{inputs.parameters.pipeUUID}}/runs/{{inputs.parameters.runUUID}}"
         command:
           - /bin/bash
           - -c
           - |
             echo "Retrieving git clone..." && cp -R /workdir/{{workflow.parameters.gh_org}}/{{workflow.parameters.gh_repo}} /tmp/lint
+            . /vault/secrets/ci-token
+
+            # Disable the PR comment reporter if this is not a PR
+            if [ "${isPR}" == "true" ]
+            then
+              export GITHUB_COMMENT_REPORTER="true"
+            else
+              export GITHUB_COMMENT_REPORTER="false"
+            fi
+
             ./entrypoint.sh
         volumeMounts:
           - name: workdir
