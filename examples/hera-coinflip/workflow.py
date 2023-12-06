@@ -2,7 +2,7 @@ import os
 import sys
 import time
 
-from hera.workflows import Container, Step, Steps, Resources, Workflow, script
+from hera.workflows import Container, Resources, Step, Steps, Workflow, script
 from pipekit_sdk.service import PipekitService
 
 # Obtain Pipekit Hera token from environment variable
