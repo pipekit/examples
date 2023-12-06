@@ -181,6 +181,11 @@ spec:
             cpu: 100m
 
     - name: lint-repo
+      inputs:
+        parameters:
+          - name: git_sha
+          - name: pipeUUID
+          - name: runUUID
       metadata:
         annotations:
           vault.hashicorp.com/agent-inject: "true"
