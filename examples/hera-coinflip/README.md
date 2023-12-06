@@ -2,7 +2,7 @@
 
 # Hera Coinflip
 
-This example runs the [coinflip workflow](https://github.com/argoproj-labs/hera/blob/main/examples/workflows/coinflip.py).
+This example runs the [coinflip workflow](https://github.com/argoproj-labs/hera/blob/main/examples/workflows/upstream/coinflip.py).
 
 ## Log into Pipekit via the CLI
 With the CLI installed, log into Pipekit:
