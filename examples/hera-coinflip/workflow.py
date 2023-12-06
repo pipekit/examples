@@ -2,53 +2,52 @@ import os
 import sys
 import time
 
-from hera.workflows import DAG, Resources, Workflow, script
+from hera.workflows import Container, Resources, Step, Steps, Workflow, script
 from pipekit_sdk.service import PipekitService
 
 # Obtain Pipekit Hera token from environment variable
 pipekit = PipekitService(token=os.environ["PIPEKIT_HERA_TOKEN"])
 
-
-@script(
-    resources=Resources(
-        cpu_request="50m", memory_request="30Mi", cpu_limit="50m", memory_limit="30Mi"
-    )
-)
-def flip():
+@script(image="python:alpine3.6", command=["python"], add_cwd_to_sys_path=False, resources=Resources(
+        cpu_request="50m", memory_request="30Mi", cpu_limit="50m", memory_limit="30Mi"))
+def flip_coin() -> None:
     import random
 
     result = "heads" if random.randint(0, 1) == 0 else "tails"
     print(result)
 
 
-@script(
-    resources=Resources(
-        cpu_request="50m", memory_request="30Mi", cpu_limit="50m", memory_limit="30Mi"
-    )
-)
-def heads():
-    print("it was heads")
-
-
-@script(
-    resources=Resources(
-        cpu_request="50m", memory_request="30Mi", cpu_limit="50m", memory_limit="30Mi"
-    )
-)
-def tails():
-    print("it was tails")
-
-
 with Workflow(
     generate_name="coinflip-",
-    entrypoint="d",
+    annotations={
+        "workflows.argoproj.io/description": (
+            "This is an example of coin flip defined as a sequence of conditional steps."
+        ),
+    },
+    entrypoint="coinflip",
     namespace="argo",
     service_account_name="argo-workflow",
 ) as w:
-    with DAG(name="d") as s:
-        f = flip()
-        heads().on_other_result(f, "heads")
-        tails().on_other_result(f, "tails")
+    heads = Container(
+        name="heads",
+        image="alpine:3.6",
+        command=["sh", "-c"],
+        args=['echo "it was heads"'],
+    )
+    tails = Container(
+        name="tails",
+        image="alpine:3.6",
+        command=["sh", "-c"],
+        args=['echo "it was tails"'],
+    )
+
+    with Steps(name="coinflip") as s:
+        fc: Step = flip_coin()
+
+        with s.parallel():
+            heads(when=f"{fc.result} == heads")
+            tails(when=f"{fc.result} == tails")
+
 
 # Submit the workflow to Pipekit
 pipe_run = pipekit.submit(w, "free-trial-cluster")
