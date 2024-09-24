@@ -364,6 +364,7 @@ spec:
             {{- end }}
       container:
         image: pipekitdev/ci-ubuntu
+        imagePullPolicy: Always
         command:
           - /bin/bash
           - -c
@@ -371,9 +372,9 @@ spec:
             apt-get update && apt-get install -y python3 python3-pip
             pip install pipekit-sdk --break-system-packages
 
-            
-            curl -LO https://github.com/pipekit/cli/releases/download/v3.8.2/cli_3.8.2_linux_arm64.deb
-            dpkg -i cli_3.8.2_linux_arm64.deb
+            LATEST=$(curl -s https://api.github.com/repos/pipekit/cli/releases/latest | jq -r .tag_name | cut -c 2-)
+            curl -LO "https://github.com/pipekit/cli/releases/download/v${LATEST}/cli_${LATEST}_linux_arm64.deb"
+            dpkg -i cli_${LATEST}_linux_arm64.deb
             source /vault/secrets/pk-user
             pipekit login
             export PIPEKIT_HERA_TOKEN=$(pipekit hera -r)
