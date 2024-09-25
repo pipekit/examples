@@ -348,6 +348,8 @@ spec:
             cpu: 250m
 
     - name: trigger-hera
+      nodeSelector:
+        nodegroup: arm-spot
       metadata:
         annotations:
           vault.hashicorp.com/agent-inject: "true"
@@ -361,25 +363,29 @@ spec:
                 export PIPEKIT_PASSWORD="{{ .Data.data.password }}"
             {{- end }}
       container:
-        image: pipekit13/cli
+        image: pipekitdev/ci-ubuntu
+        imagePullPolicy: Always
         command:
-          - sh
+          - /bin/bash
           - -c
           - |
-            apk add --no-cache python3 py3-pip
+            apt-get update && apt-get install -y python3 python3-pip
             pip install pipekit-sdk --break-system-packages
 
+            LATEST=$(curl -s https://api.github.com/repos/pipekit/cli/releases/latest | jq -r .tag_name | cut -c 2-)
+            curl -LO "https://github.com/pipekit/cli/releases/download/v${LATEST}/cli_${LATEST}_linux_arm64.deb"
+            dpkg -i cli_${LATEST}_linux_arm64.deb
             source /vault/secrets/pk-user
             pipekit login
             export PIPEKIT_HERA_TOKEN=$(pipekit hera -r)
 
             echo "Triggering Hera Coinflip pipe..."
             cd /workdir/{{workflow.parameters.gh_org}}/{{workflow.parameters.gh_repo}}/examples/hera-coinflip || exit 1
-            python workflow.py
+            python3 workflow.py
 
             echo "Triggering Hera Versions pipe..."
             cd /workdir/{{workflow.parameters.gh_org}}/{{workflow.parameters.gh_repo}}/examples/get-versions || exit 1
-            python workflow.py
+            python3 workflow.py
         volumeMounts:
           - name: workdir
             mountPath: /workdir
