@@ -198,7 +198,7 @@ spec:
                 export GITHUB_TOKEN="{{ .Data.data.github_PAT }}"
             {{- end }}
       container:
-        image: oxsecurity/megalinter-python:v7
+        image: oxsecurity/megalinter-python:v8
         env:
           - name: GITHUB_SHA
             value: "{{inputs.parameters.git_sha}}"
