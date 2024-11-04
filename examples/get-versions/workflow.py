@@ -82,27 +82,27 @@ with Workflow(
 pipe_run = pipekit.submit(w, "free-trial-cluster")
 
 # Print Run URL
-run_info = pipekit.get_run(pipe_run["uuid"])
+run_info = pipekit.get_run(pipe_run.uuid)
 if "PIPEKIT_URL" in os.environ:
     pipekit_url = os.environ["PIPEKIT_URL"]
 else:
     pipekit_url = "https://pipekit.io"
 print(
-    f"Observe the run at: {pipekit_url}/pipes/{run_info['pipeUUID']}/runs/{run_info['uuid']}"
+    f"Observe the run at: {pipekit_url}/pipes/{run_info.pipe_uuid}/runs/{run_info.uuid}"
 )
 
 # Wait for the workflow to complete
-pipe_status = pipekit.get_run(pipe_run["uuid"])
+pipe_status = pipekit.get_run(pipe_run.uuid)
 pipe_states = ["completed", "failed", "stopped", "terminated"]
 
-while pipe_status['status'] not in pipe_states:
+while pipe_status.status not in pipe_states:
     time.sleep(5)
-    pipe_status = pipekit.get_run(pipe_run["uuid"])
+    pipe_status = pipekit.get_run(pipe_run.uuid)
 
 # Throw non-zero exit code if workflow failed
-if pipe_status['status'] != "completed":
-    print(f"Exiting - Workflow status: {pipe_status['status']}")
+if pipe_status.status != "completed":
+    print(f"Exiting - Workflow status: {pipe_status.status}")
     sys.exit(1)
 else:
-    print(f"Workflow status: {pipe_status['status']}")
+    print(f"Workflow status: {pipe_status.status}")
     sys.exit(0)
