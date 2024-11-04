@@ -17,6 +17,7 @@ DISABLE_LINTERS:
   - SPELL_LYCHEE
   - YAML_V8R
   - YAML_YAMLLINT
+  - MARKDOWN_MARKDOWN_LINK_CHECK # Disabled due to not working in-cluster right now.
 
 REPORT_OUTPUT_FOLDER: none
 CLEAR_REPORT_FOLDER: true
