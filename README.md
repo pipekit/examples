@@ -22,4 +22,5 @@ You are encouraged to fork the repo and experiment with adjusting the workflows 
 | [fan-out-fan-in]( examples/fan-out-fan-in/ )             | Shows how S3 artifact processing can be parallelized with Argo Workflows using a fan-out approach.                                         |
 | [get-versions](examples/get-versions/)                   | A workflow that outputs the versions of software installed in a Pipekit free trial cluster. Available as both a Hera and a native Workflow |
 | [hera-coinflip](examples/hera-coinflip/)                 | Runs a basic coinflip example using the Hera Python framework.                                                                             |
+| [hera-notebook-forecast](examples/hera-notebook-forecast/) | Press-play data job from a Jupyter notebook: aggregate energy demand and forecast the next day with Hera. Shows a platform-team abstraction that hides Kubernetes. |
 |                                                          |                                                                                                                                            |
