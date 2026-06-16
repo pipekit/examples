@@ -35,9 +35,12 @@ CLUSTER = os.environ.get("PIPEKIT_CLUSTER", "free-trial-cluster")
 _UI_URL = os.environ.get("PIPEKIT_URL", "https://pipekit.io")
 
 # Defaults the platform team controls. Analysts do not set these.
-# A public image with pandas and numpy preinstalled, so the job code reads like real
-# analyst work. Swap the tag (or set DATA_IMAGE) to pin a different version.
-DATA_IMAGE = os.environ.get("DATA_IMAGE", "amancevice/pandas:2.2.2-slim")
+# A pandas + numpy image so the job code reads like real analyst work. We use a Docker
+# Hub Verified Publisher namespace (demisto): the free trial cluster shares one egress
+# IP, and Docker Hub does not count pulls from Verified Publisher namespaces against the
+# anonymous rate limit, so this avoids the toomanyrequests pull failures that hit
+# community images. Swap the tag (or set DATA_IMAGE) to pin a different version.
+DATA_IMAGE = os.environ.get("DATA_IMAGE", "demisto/pandas:1.0.0.10120494")
 # The free trial cluster applies a 200Mi memory limit when a workflow omits one. We
 # set an explicit 512Mi request and limit to override that for the pandas step.
 DATA_RESOURCES = Resources(
@@ -99,11 +102,31 @@ def to_yaml(name, step):
 def logs(result, follow=False):
     """Print logs for a run. Pass the PipeRun from run()/submit(), or a run-uuid string.
 
-    follow=False prints a snapshot of what exists now. follow=True streams until the
-    run ends, which blocks the cell.
+    follow=True streams until the run ends (blocks the cell). Otherwise prints a
+    snapshot of the run's logs.
     """
     run_uuid = getattr(result, "uuid", result)
-    _service().print_logs(run_uuid, follow=follow)
+    pipekit = _service()
+    if follow:
+        pipekit.print_logs(run_uuid, follow=True)
+        return
+
+    # The SDK snapshot appends empty `pod-name=`/`container-name=` query params. The API
+    # parses each as a one-element [""] slice and adds a Loki matcher (podName="") that
+    # matches no stream, so the snapshot returns nothing for a finished run. Query the
+    # endpoint with no scope params, like the Pipekit UI and MCP, so it returns the logs.
+    import requests
+    from pipekit_sdk.models.model import Logs
+
+    response = requests.get(
+        f"{pipekit.users_url}/api/users/v1/runs/{run_uuid}/container_logs",
+        headers={"Authorization": f"Bearer {pipekit.access_token}"},
+        timeout=30,
+    )
+    response.raise_for_status()
+    for entry in response.json() or []:
+        line = Logs.model_validate(entry)
+        print(f"[{line.pod_name}][{line.container_name}] {line.output}")
 
 
 def wait(result, poll_seconds=5):

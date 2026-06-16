@@ -42,6 +42,15 @@
         "getcwd",
         "isdir",
         "kernelspec",
-        "nbformat"
+        "nbformat",
+        "direnv",
+        "dlopen",
+        "libstdc",
+        "nixpkgs",
+        "pkgs",
+        "pyzmq",
+        "stdenv",
+        "demisto",
+        "toomanyrequests"
     ]
 }

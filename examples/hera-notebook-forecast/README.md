@@ -25,21 +25,38 @@ pipekit login
 
 ## Set up the environment
 
+This repo ships a Nix dev shell (`shell.nix` at the repo root) that provides Python and the C++ runtime the Jupyter kernel needs on NixOS. From the repo root, inside the dev shell:
+
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install hera pipekit-sdk ipykernel
+direnv allow                 # or run: nix-shell
+python -m venv .venv
+.venv/bin/pip install hera pipekit-sdk ipykernel jupyter
 ```
 
-pandas and numpy run on the cluster, not locally, so you do not need them here.
+`ipykernel` and `jupyter` let your editor run the notebook. pandas and numpy run on the cluster, not locally, so you do not need them here.
+
+## Register the kernel
+
+On NixOS the kernel needs `libstdc++` on `LD_LIBRARY_PATH`, or `pyzmq` fails to load and the editor reports that `jupyter and notebook` are missing. Bake that path into the kernel so it works however you launch your editor. Run this inside the dev shell, where `LD_LIBRARY_PATH` is set:
+
+```bash
+.venv/bin/python -m ipykernel install --user --name hera-forecast \
+  --display-name "Python (hera-forecast)" \
+  --env LD_LIBRARY_PATH "$LD_LIBRARY_PATH"
+```
+
+Re-run it after a nixpkgs upgrade or `nix-collect-garbage`, since the baked path points into the Nix store.
 
 ## Run it from the notebook
 
-Open `run_forecast.ipynb`, select the `.venv` kernel (top right in VSCode), and run the cells top to bottom. Set your cluster name in the `Point at your cluster` cell if it is not `free-trial-cluster`. The run cell prints a link to watch the job live in the Pipekit UI, and a later cell pulls the forecast logs inline.
+Open `examples/hera-notebook-forecast/run_forecast.ipynb` and select the `Python (hera-forecast)` kernel in the picker (top right), not a bare `Python 3.x` interpreter. Run the cells top to bottom. Set your cluster name in the `Point at your cluster` cell if it is not `free-trial-cluster`. The run cell prints a link to watch the job live in the Pipekit UI, and a later cell pulls the forecast logs inline.
 
 ## Run it from the terminal
 
+From the repo root, with the dev shell loaded:
+
 ```bash
-.venv/bin/python workflow.py
+.venv/bin/python examples/hera-notebook-forecast/workflow.py
 ```
 
 It submits the job, prints a watch link, waits for the run to finish, and prints the logs.
@@ -55,7 +72,7 @@ export PIPEKIT_CLUSTER=my-cluster
 ## Test the logic locally
 
 ```bash
-.venv/bin/python test_demand_forecast.py
+.venv/bin/python examples/hera-notebook-forecast/test_demand_forecast.py
 ```
 
 The aggregation and forecast functions are plain Python, so you can test them in milliseconds before the job ever touches the cluster.
