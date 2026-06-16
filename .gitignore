@@ -1,1 +1,6 @@
 __pycache__
+.gitnexus
+
+# Python virtualenv and direnv state (never committed).
+.venv/
+.direnv/
