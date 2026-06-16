@@ -49,10 +49,21 @@ def test_forecast_follows_the_upward_trend():
         assert forecast_next_day(daily, region) > series[0]
 
 
+def test_forecast_raises_on_unknown_region():
+    daily = daily_totals(make_readings(days=3))
+    try:
+        forecast_next_day(daily, "Atlantis")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError for an unknown region")
+
+
 if __name__ == "__main__":
     test_daily_totals_small_case()
     test_forecast_extends_a_linear_trend()
     test_make_readings_is_deterministic()
     test_readings_cover_every_region_day_period()
     test_forecast_follows_the_upward_trend()
+    test_forecast_raises_on_unknown_region()
     print("all tests passed")

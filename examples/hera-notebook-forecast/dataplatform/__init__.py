@@ -129,13 +129,21 @@ def logs(result, follow=False):
         print(f"[{line.pod_name}][{line.container_name}] {line.output}")
 
 
-def wait(result, poll_seconds=5):
-    """Poll until the run reaches a terminal state and return the final status string."""
+def wait(result, poll_seconds=5, timeout_seconds=3900):
+    """Poll until the run reaches a terminal state and return the final status string.
+
+    Raises TimeoutError if the run does not finish within timeout_seconds. The default
+    sits above the free trial cluster's 1 hour activeDeadlineSeconds, so a run that hits
+    its own deadline returns a terminal status before this fires.
+    """
     pipekit = _service()
     run_uuid = getattr(result, "uuid", result)
     terminal = {"completed", "failed", "stopped", "terminated"}
+    start = time.monotonic()
     status = pipekit.get_run(run_uuid).status
     while status not in terminal:
+        if time.monotonic() - start > timeout_seconds:
+            raise TimeoutError(f"run {run_uuid} did not finish within {timeout_seconds}s")
         time.sleep(poll_seconds)
         status = pipekit.get_run(run_uuid).status
     return status

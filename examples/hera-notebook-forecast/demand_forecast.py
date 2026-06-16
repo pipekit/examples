@@ -39,7 +39,7 @@ def make_readings(days=DAYS, periods_per_day=PERIODS_PER_DAY, seed=42):
                     + rng.uniform(-60.0, 60.0)
                 )
                 readings.append(
-                    {"region": region, "day": day, "period": period, "mw": round(mw, 1)}
+                    {"region": region, "day": day, "period": period, "mw": mw}
                 )
     return readings
 
@@ -66,6 +66,8 @@ def forecast_next_day(daily, region):
     series = sorted(
         (row for row in daily if row["region"] == region), key=lambda row: row["day"]
     )
+    if not series:
+        raise ValueError(f"no daily data for region {region}")
     xs = [row["day"] for row in series]
     ys = [row["mwh"] for row in series]
     n = len(xs)
