@@ -51,6 +51,7 @@
         "pyzmq",
         "stdenv",
         "demisto",
-        "toomanyrequests"
+        "toomanyrequests",
+        "envrc"
     ]
 }

@@ -6,9 +6,8 @@ is self-contained (Hera ships it to the cluster) and mirrors the pure logic in
 ``demand_forecast.py``, computed with pandas and numpy on the data image.
 """
 
-from hera.workflows import script
-
 from dataplatform import DATA_IMAGE, DATA_RESOURCES
+from hera.workflows import script
 
 
 @script(
