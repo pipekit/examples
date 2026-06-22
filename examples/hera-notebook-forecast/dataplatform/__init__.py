@@ -99,16 +99,21 @@ def to_yaml(name, step):
     return _build(name, step).to_yaml()
 
 
-def logs(result, follow=False):
+def logs(result, follow=False, timeout_seconds=3900):
     """Print logs for a run. Pass the PipeRun from run()/submit(), or a run-uuid string.
 
-    follow=True streams until the run ends (blocks the cell). Otherwise prints a
-    snapshot of the run's logs.
+    follow=True streams the run's logs live: it backfills the history so far, then prints
+    new lines as they arrive, and returns when the run finishes. This blocks the cell while
+    the run is active. Otherwise it prints a one-off snapshot of the logs.
+
+    timeout_seconds caps how long follow=True waits. If the run never sends an end-of-stream
+    signal, the stream stops after this and prints a note, so the cell cannot hang forever.
+    The default matches wait().
     """
     run_uuid = getattr(result, "uuid", result)
     pipekit = _service()
     if follow:
-        pipekit.print_logs(run_uuid, follow=True)
+        _stream_logs(pipekit, run_uuid, timeout_seconds)
         return
 
     # The SDK snapshot appends empty `pod-name=`/`container-name=` query params. The API
@@ -127,6 +132,68 @@ def logs(result, follow=False):
     for entry in response.json() or []:
         line = Logs.model_validate(entry)
         print(f"[{line.pod_name}][{line.container_name}] {line.output}")
+
+
+def _stream_logs(pipekit, run_uuid, timeout_seconds):
+    """Stream a run's logs over Server-Sent Events until the run ends.
+
+    The SDK's follow path builds the stream URL with empty `pod-name=`/`container-name=`
+    params, which the API turns into a Loki matcher that matches no stream, so it prints
+    nothing. We hit `container_logs_stream` with no scope params, the same workaround the
+    snapshot path uses, and parse the SSE ourselves.
+
+    The server sends three kinds of `data:` events: a `ping` keep-alive every few seconds,
+    a JSON log line, and a final `close` once the run has been finished for two ticks. It
+    closes the stream itself about ten seconds after the run completes. We still keep a
+    wall-clock guard in case that `close` never arrives.
+    """
+    import json
+
+    import requests
+    from pipekit_sdk.models.model import Logs
+
+    url = f"{pipekit.users_url}/api/users/v1/runs/{run_uuid}/container_logs_stream"
+    deadline = time.monotonic() + timeout_seconds
+
+    # The server pings every few seconds, so a long read gap means the connection died.
+    # The read timeout ends the stream then; the deadline check ends a stream that keeps
+    # pinging past timeout_seconds without ever sending `close`.
+    response = requests.get(
+        url,
+        headers={
+            "Authorization": f"Bearer {pipekit.access_token}",
+            "Cache-Control": "no-cache",
+        },
+        stream=True,
+        timeout=(10, 60),
+    )
+    response.raise_for_status()
+
+    data_prefix = "data: "
+    try:
+        for raw in response.iter_lines(decode_unicode=True):
+            if time.monotonic() > deadline:
+                print(f"stopped following after {timeout_seconds}s; the run may still be active")
+                return
+
+            line = raw.strip() if raw else ""
+            # id: lines carry the event cursor and blank lines separate events; neither
+            # prints. Only data: events carry a ping, a log line, or the close signal.
+            if not line.startswith(data_prefix):
+                continue
+
+            payload = line[len(data_prefix) :]
+            if payload == "ping":
+                continue
+            if payload == "close":
+                return
+
+            entry = Logs.model_validate(json.loads(payload))
+            print(f"[{entry.pod_name}][{entry.container_name}] {entry.output}")
+    except requests.exceptions.Timeout:
+        print("log stream went quiet; the run may still be active. Re-run this cell to reconnect.")
+    finally:
+        response.close()
 
 
 def wait(result, poll_seconds=5, timeout_seconds=3900):
