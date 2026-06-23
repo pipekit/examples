@@ -16,7 +16,8 @@ Hera ``@script`` function and submits it:
 
 ``run``/``submit`` send the workflow to Pipekit and print a link to watch it live.
 ``logs(result)`` prints a log snapshot. ``to_yaml`` returns the same workflow as a
-manifest you can commit to git (the GitOps path).
+manifest you can commit to git (the GitOps path). ``cron`` schedules the same job to
+run on a recurring basis.
 
 These defaults target the Pipekit free trial cluster: namespace ``argo``, service
 account ``argo-workflow`` (set explicitly, since the controller default is ``argo``
@@ -27,7 +28,7 @@ footprint the trial cluster allows.
 import os
 import time
 
-from hera.workflows import Resources, Steps, Workflow
+from hera.workflows import CronWorkflow, Resources, Steps, Workflow
 
 # Connection. The SDK defaults its URL to https://api.pipekit.io, which is correct
 # for the free trial cluster, so PIPEKIT_URL only needs setting for a different env.
@@ -97,6 +98,55 @@ def run(name, step):
 def to_yaml(name, step):
     """Return the one-step workflow as a committable manifest, without submitting."""
     return _build(name, step).to_yaml()
+
+
+def _build_cron(name, step, schedule, concurrency_policy="Replace", starting_deadline_seconds=0, timezone=None):
+    """Wrap a single Hera @script function as a scheduled CronWorkflow with platform defaults.
+
+    Mirrors _build, but the job runs on a schedule instead of once. The cron uses a stable
+    name, not generate_name, so creating it again targets the same cron object. Each tick of
+    the schedule starts a new run under that cron. concurrency_policy and
+    starting_deadline_seconds match the native examples/cronworkflow-example.
+    """
+    with CronWorkflow(
+        name=name,
+        entrypoint="main",
+        namespace=_NAMESPACE,
+        service_account_name=_SERVICE_ACCOUNT,
+        schedule=schedule,
+        concurrency_policy=concurrency_policy,
+        starting_deadline_seconds=starting_deadline_seconds,
+        timezone=timezone,
+    ) as cron_workflow:
+        with Steps(name="main"):
+            step()
+    return cron_workflow
+
+
+def create_cron(cron_workflow):
+    """Create a built CronWorkflow on Pipekit. Returns the PipeRun and prints a run-history link."""
+    pipekit = _service()
+    pipe_run = pipekit.create(cron_workflow, CLUSTER)
+    print(f"created cron {cron_workflow.name} (schedule {cron_workflow.schedule})")
+    print(f"run history: {_UI_URL}/pipes/{pipe_run.pipe_uuid}")
+    return pipe_run
+
+
+def cron(name, step, schedule, concurrency_policy="Replace", starting_deadline_seconds=0, timezone=None):
+    """Schedule a @script function to run on a recurring basis, via Pipekit.
+
+    schedule is a standard cron expression, for example "0 6 * * *" for 06:00 every day. The
+    job runs with the same platform defaults as run(): the data image, resources, namespace,
+    and service account. Returns the PipeRun for the created cron and prints a link to its run
+    history in the UI. Manage the cron after creation (suspend, resume, delete, trigger) from
+    the Pipekit CLI or UI; the SDK creates cron workflows but does not manage their lifecycle.
+    """
+    return create_cron(_build_cron(name, step, schedule, concurrency_policy, starting_deadline_seconds, timezone))
+
+
+def cron_to_yaml(name, step, schedule, concurrency_policy="Replace", starting_deadline_seconds=0, timezone=None):
+    """Return the CronWorkflow as a committable manifest, without creating it."""
+    return _build_cron(name, step, schedule, concurrency_policy, starting_deadline_seconds, timezone).to_yaml()
 
 
 def logs(result, follow=False, timeout_seconds=3900):

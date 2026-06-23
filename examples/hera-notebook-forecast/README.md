@@ -12,7 +12,8 @@ This example splits the work the way a platform team would:
 - `forecast_step.py`: the single Hera `@script` step an analyst writes. It uses pandas and numpy on the platform's image.
 - `demand_forecast.py`: the same logic as plain Python functions, the tested source of truth.
 - `test_demand_forecast.py`: a local test of that logic. Runs in milliseconds, no cluster.
-- `run_forecast.ipynb`: the notebook you press play in.
+- `run_forecast.ipynb`: the notebook you press play in to run the job once.
+- `cron_forecast.ipynb`: the notebook that schedules the same job as a recurring cron.
 - `workflow.py`: the same job as a plain script, for the terminal.
 
 ## Log into Pipekit via the CLI
@@ -50,6 +51,21 @@ Re-run it after a nixpkgs upgrade or `nix-collect-garbage`, since the baked path
 ## Run it from the notebook
 
 Open `examples/hera-notebook-forecast/run_forecast.ipynb` and select the `Python (hera-forecast)` kernel in the picker (top right), not a bare `Python 3.x` interpreter. Run the cells top to bottom. Set your cluster name in the `Point at your cluster` cell if it is not `free-trial-cluster`. The run cell prints a link to watch the job live in the Pipekit UI, and a later cell streams the forecast logs inline as the run produces them.
+
+## Schedule it on a cron
+
+Open `examples/hera-notebook-forecast/cron_forecast.ipynb` and run the cells top to bottom, the same way. Instead of running the job once, it schedules the job as a `CronWorkflow` with one call:
+
+```python
+from dataplatform import cron
+from forecast_step import forecast_demand
+
+cron('daily-demand-forecast', forecast_demand, schedule='0 6 * * *')
+```
+
+The cell prints a link to the cron's run history in the UI. Each tick of the schedule starts a new run there. The same step runs with the same platform defaults as the one-off path. A `cron_to_yaml` cell renders the manifest for the GitOps path, matching the native `examples/cronworkflow-example/workflow.yaml`.
+
+Creating a cron is in the SDK. Managing it after creation (suspend, resume, delete, trigger) is a CLI or UI task. See the [cron CLI commands](https://docs.pipekit.io/cli/cron-workflows).
 
 ## Run it from the terminal
 
