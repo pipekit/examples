@@ -134,6 +134,21 @@ def logs(result, follow=False, timeout_seconds=3900):
         print(f"[{line.pod_name}][{line.container_name}] {line.output}")
 
 
+_TERMINAL_STATES = {"completed", "failed", "stopped", "terminated"}
+
+
+def _run_status(pipekit, run_uuid):
+    """Return the run's status, or "" if the status check itself fails.
+
+    Used only to decide whether to keep reconnecting, so a transient failure here should
+    not stop the stream. An unknown status reads as not-terminal and we keep waiting.
+    """
+    try:
+        return pipekit.get_run(run_uuid).status
+    except Exception:  # noqa: BLE001 - best-effort check; any failure means "keep waiting"
+        return ""
+
+
 def _stream_logs(pipekit, run_uuid, timeout_seconds):
     """Stream a run's logs over Server-Sent Events until the run ends.
 
@@ -143,9 +158,13 @@ def _stream_logs(pipekit, run_uuid, timeout_seconds):
     snapshot path uses, and parse the SSE ourselves.
 
     The server sends three kinds of `data:` events: a `ping` keep-alive every few seconds,
-    a JSON log line, and a final `close` once the run has been finished for two ticks. It
-    closes the stream itself about ten seconds after the run completes. We still keep a
-    wall-clock guard in case that `close` never arrives.
+    a JSON log line, and a final `close` once the run has been finished for two ticks. The
+    chunked connection can drop before `close` arrives. On a busy cluster the pod can be
+    slow to start, and the connection may drop several times before any logs appear. We
+    reconnect from the last event id we saw, so the resumed stream does not replay the
+    backfill, and we keep reconnecting while the run is still pending or running. We stop
+    once the run reaches a terminal state or the wall-clock deadline passes, so the cell
+    cannot hang.
     """
     import json
 
@@ -154,46 +173,82 @@ def _stream_logs(pipekit, run_uuid, timeout_seconds):
 
     url = f"{pipekit.users_url}/api/users/v1/runs/{run_uuid}/container_logs_stream"
     deadline = time.monotonic() + timeout_seconds
-
-    # The server pings every few seconds, so a long read gap means the connection died.
-    # The read timeout ends the stream then; the deadline check ends a stream that keeps
-    # pinging past timeout_seconds without ever sending `close`.
-    response = requests.get(
-        url,
-        headers={
-            "Authorization": f"Bearer {pipekit.access_token}",
-            "Cache-Control": "no-cache",
-        },
-        stream=True,
-        timeout=(10, 60),
-    )
-    response.raise_for_status()
-
     data_prefix = "data: "
-    try:
-        for raw in response.iter_lines(decode_unicode=True):
-            if time.monotonic() > deadline:
-                print(f"stopped following after {timeout_seconds}s; the run may still be active")
-                return
+    id_prefix = "id: "
+    last_event_id = ""
+    printed_any_log = False
+    waiting_notice_shown = False
+    backoff_seconds = 1
 
-            line = raw.strip() if raw else ""
-            # id: lines carry the event cursor and blank lines separate events; neither
-            # prints. Only data: events carry a ping, a log line, or the close signal.
-            if not line.startswith(data_prefix):
-                continue
+    # Connection-level drops, not bad responses. raise_for_status() still raises on a
+    # 4xx/5xx, so a real auth or routing error surfaces instead of looping.
+    transient = (
+        requests.exceptions.ChunkedEncodingError,
+        requests.exceptions.ConnectionError,
+        requests.exceptions.Timeout,
+    )
 
-            payload = line[len(data_prefix) :]
-            if payload == "ping":
-                continue
-            if payload == "close":
-                return
+    while time.monotonic() < deadline:
+        # last-event-id resumes the stream after the last line we printed, so a reconnect
+        # does not replay the whole history. The server pings every few seconds, so a 60s
+        # read gap means the connection is dead.
+        response = requests.get(
+            url,
+            headers={
+                "Authorization": f"Bearer {pipekit.access_token}",
+                "Cache-Control": "no-cache",
+                "last-event-id": last_event_id,
+            },
+            stream=True,
+            timeout=(10, 60),
+        )
+        response.raise_for_status()
 
-            entry = Logs.model_validate(json.loads(payload))
-            print(f"[{entry.pod_name}][{entry.container_name}] {entry.output}")
-    except requests.exceptions.Timeout:
-        print("log stream went quiet; the run may still be active. Re-run this cell to reconnect.")
-    finally:
-        response.close()
+        try:
+            for raw in response.iter_lines(decode_unicode=True):
+                if time.monotonic() > deadline:
+                    print(f"stopped following after {timeout_seconds}s; the run may still be active")
+                    return
+
+                line = raw.strip() if raw else ""
+                if not line:
+                    continue
+
+                if line.startswith(id_prefix):
+                    last_event_id = line[len(id_prefix) :]
+                    continue
+                if not line.startswith(data_prefix):
+                    continue
+
+                payload = line[len(data_prefix) :]
+                if payload == "ping":
+                    continue
+                if payload == "close":
+                    return
+
+                # A real log line means the stream is healthy, so reset the backoff.
+                backoff_seconds = 1
+                printed_any_log = True
+                entry = Logs.model_validate(json.loads(payload))
+                print(f"[{entry.pod_name}][{entry.container_name}] {entry.output}")
+        except transient:
+            pass  # the connection dropped; the status check below decides what to do
+        finally:
+            response.close()
+
+        # The stream ended without a `close`. Reconnect only while the run is still active.
+        # A terminal run that dropped its stream is genuinely finished, so stop there.
+        if _run_status(pipekit, run_uuid) in _TERMINAL_STATES:
+            return
+        # Before any logs appear, tell the user we are waiting on the pod. After logs have
+        # started, a drop reconnects silently and resumes from last_event_id.
+        if not printed_any_log and not waiting_notice_shown:
+            print("waiting for the run to produce logs (the pod may still be starting)...")
+            waiting_notice_shown = True
+        time.sleep(backoff_seconds)
+        backoff_seconds = min(backoff_seconds * 2, 10)
+
+    print(f"stopped following after {timeout_seconds}s; the run may still be active")
 
 
 def wait(result, poll_seconds=5, timeout_seconds=3900):
