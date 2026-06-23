@@ -107,13 +107,17 @@ def _build_cron(name, step, schedule, concurrency_policy="Replace", starting_dea
     name, not generate_name, so creating it again targets the same cron object. Each tick of
     the schedule starts a new run under that cron. concurrency_policy and
     starting_deadline_seconds match the native examples/cronworkflow-example.
+
+    The schedule goes into the `schedules` list, not the older singular `schedule` field.
+    Argo Workflows 3.6 deprecated `schedule` and the cluster CRD now requires `schedules`,
+    so the singular field fails validation with "spec.schedules: Required value".
     """
     with CronWorkflow(
         name=name,
         entrypoint="main",
         namespace=_NAMESPACE,
         service_account_name=_SERVICE_ACCOUNT,
-        schedule=schedule,
+        schedules=[schedule],
         concurrency_policy=concurrency_policy,
         starting_deadline_seconds=starting_deadline_seconds,
         timezone=timezone,
@@ -124,10 +128,25 @@ def _build_cron(name, step, schedule, concurrency_policy="Replace", starting_dea
 
 
 def create_cron(cron_workflow):
-    """Create a built CronWorkflow on Pipekit. Returns the PipeRun and prints a run-history link."""
+    """Create a built CronWorkflow on Pipekit. Returns the PipeRun and prints a run-history link.
+
+    The SDK only creates crons, it cannot update them. Creating one whose name already exists
+    on the cluster fails. We turn that one API error into a clear message that says how to
+    recover, since an analyst re-running the cell is the common way to hit it.
+    """
     pipekit = _service()
-    pipe_run = pipekit.create(cron_workflow, CLUSTER)
-    print(f"created cron {cron_workflow.name} (schedule {cron_workflow.schedule})")
+    try:
+        pipe_run = pipekit.create(cron_workflow, CLUSTER)
+    except Exception as err:
+        if "already exists" in str(err):
+            raise RuntimeError(
+                f"a cron named {cron_workflow.name!r} already exists on {CLUSTER}. The SDK creates "
+                "crons but cannot update them. Delete the existing cron from the Pipekit UI or CLI, "
+                "or create this one under a different name, then run this cell again."
+            ) from err
+        raise
+    schedule = ", ".join(cron_workflow.schedules or [])
+    print(f"created cron {cron_workflow.name} (schedule {schedule})")
     print(f"run history: {_UI_URL}/pipes/{pipe_run.pipe_uuid}")
     return pipe_run
 

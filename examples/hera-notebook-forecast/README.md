@@ -63,7 +63,7 @@ from forecast_step import forecast_demand
 cron('daily-demand-forecast', forecast_demand, schedule='0 6 * * *')
 ```
 
-The cell prints a link to the cron's run history in the UI. Each tick of the schedule starts a new run there. The same step runs with the same platform defaults as the one-off path. A `cron_to_yaml` cell renders the manifest for the GitOps path, matching the native `examples/cronworkflow-example/workflow.yaml`.
+The cell prints a link to the cron's run history in the UI. Each tick of the schedule starts a new run there. The same step runs with the same platform defaults as the one-off path. A `cron_to_yaml` cell renders the manifest for the GitOps path. It is the same kind of `CronWorkflow` as the native `examples/cronworkflow-example/workflow.yaml`, with the schedule in the `schedules` list that Argo Workflows 3.6 requires.
 
 Creating a cron is in the SDK. Managing it after creation (suspend, resume, delete, trigger) is a CLI or UI task. See the [cron CLI commands](https://docs.pipekit.io/cli/cron-workflows).
 
