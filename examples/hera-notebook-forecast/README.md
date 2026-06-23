@@ -49,7 +49,7 @@ Re-run it after a nixpkgs upgrade or `nix-collect-garbage`, since the baked path
 
 ## Run it from the notebook
 
-Open `examples/hera-notebook-forecast/run_forecast.ipynb` and select the `Python (hera-forecast)` kernel in the picker (top right), not a bare `Python 3.x` interpreter. Run the cells top to bottom. Set your cluster name in the `Point at your cluster` cell if it is not `free-trial-cluster`. The run cell prints a link to watch the job live in the Pipekit UI, and a later cell pulls the forecast logs inline.
+Open `examples/hera-notebook-forecast/run_forecast.ipynb` and select the `Python (hera-forecast)` kernel in the picker (top right), not a bare `Python 3.x` interpreter. Run the cells top to bottom. Set your cluster name in the `Point at your cluster` cell if it is not `free-trial-cluster`. The run cell prints a link to watch the job live in the Pipekit UI, and a later cell streams the forecast logs inline as the run produces them.
 
 ## Run it from the terminal
 
