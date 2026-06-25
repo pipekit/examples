@@ -17,7 +17,9 @@ Hera ``@script`` function and submits it:
 ``run``/``submit`` send the workflow to Pipekit and print a link to watch it live.
 ``logs(result)`` prints a log snapshot. ``to_yaml`` returns the same workflow as a
 manifest you can commit to git (the GitOps path). ``cron`` schedules the same job to
-run on a recurring basis.
+run on a recurring basis; re-running it with the same name updates the existing cron.
+``suspend_cron``, ``resume_cron``, ``delete_cron``, and ``get_cron`` manage that cron
+after you create it. They need pipekit-sdk 2.1.2 or newer.
 
 These defaults target the Pipekit free trial cluster: namespace ``argo``, service
 account ``argo-workflow`` (set explicitly, since the controller default is ``argo``
@@ -127,26 +129,45 @@ def _build_cron(name, step, schedule, concurrency_policy="Replace", starting_dea
     return cron_workflow
 
 
-def create_cron(cron_workflow):
-    """Create a built CronWorkflow on Pipekit. Returns the PipeRun and prints a run-history link.
+def _run_history_link(pipekit, name):
+    """Return the UI run-history URL for a cron's pipe, or None if no pipe matches.
 
-    The SDK only creates crons, it cannot update them. Creating one whose name already exists
-    on the cluster fails. We turn that one API error into a clear message that says how to
-    recover, since an analyst re-running the cell is the common way to hit it.
+    The create path gets the pipe uuid straight from the API response. The update path
+    does not, so we look the pipe up by name. Pipekit names the pipe after the cron, so a
+    name match points at the same pipe the run history lives under.
+    """
+    cluster = pipekit.get_cluster_by_name(CLUSTER)
+    if cluster is None:
+        return None
+    for pipe in pipekit.list_pipes(cluster.uuid):
+        if pipe.name == name:
+            return f"{_UI_URL}/pipes/{pipe.uuid}"
+    return None
+
+
+def create_cron(cron_workflow):
+    """Create a built CronWorkflow on Pipekit, or update it if the name already exists.
+
+    The call is idempotent on the cron name. An analyst re-running the cell with a changed
+    schedule updates the existing cron instead of failing, so there is no delete-first step.
+    Prints whether it created or updated, plus a link to the cron's run history. Returns the
+    PipeRun on create, or None on update, since the update call returns the cron spec rather
+    than a run.
     """
     pipekit = _service()
+    name = cron_workflow.name
+    schedule = ", ".join(cron_workflow.schedules or [])
     try:
         pipe_run = pipekit.create(cron_workflow, CLUSTER)
     except Exception as err:
-        if "already exists" in str(err):
-            raise RuntimeError(
-                f"a cron named {cron_workflow.name!r} already exists on {CLUSTER}. The SDK creates "
-                "crons but cannot update them. Delete the existing cron from the Pipekit UI or CLI, "
-                "or create this one under a different name, then run this cell again."
-            ) from err
-        raise
-    schedule = ", ".join(cron_workflow.schedules or [])
-    print(f"created cron {cron_workflow.name} (schedule {schedule})")
+        if "already exists" not in str(err):
+            raise
+        pipekit.update_cron(cron_workflow, CLUSTER)
+        print(f"updated cron {name} (schedule {schedule})")
+        if link := _run_history_link(pipekit, name):
+            print(f"run history: {link}")
+        return None
+    print(f"created cron {name} (schedule {schedule})")
     print(f"run history: {_UI_URL}/pipes/{pipe_run.pipe_uuid}")
     return pipe_run
 
@@ -156,9 +177,10 @@ def cron(name, step, schedule, concurrency_policy="Replace", starting_deadline_s
 
     schedule is a standard cron expression, for example "0 6 * * *" for 06:00 every day. The
     job runs with the same platform defaults as run(): the data image, resources, namespace,
-    and service account. Returns the PipeRun for the created cron and prints a link to its run
-    history in the UI. Manage the cron after creation (suspend, resume, delete, trigger) from
-    the Pipekit CLI or UI; the SDK creates cron workflows but does not manage their lifecycle.
+    and service account. The call is idempotent on the name, so re-running it with a changed
+    schedule updates the existing cron. Prints a link to the cron's run history in the UI.
+    Use suspend_cron(name), resume_cron(name), delete_cron(name), and get_cron(name) to
+    manage the cron after you create it.
     """
     return create_cron(_build_cron(name, step, schedule, concurrency_policy, starting_deadline_seconds, timezone))
 
@@ -166,6 +188,46 @@ def cron(name, step, schedule, concurrency_policy="Replace", starting_deadline_s
 def cron_to_yaml(name, step, schedule, concurrency_policy="Replace", starting_deadline_seconds=0, timezone=None):
     """Return the CronWorkflow as a committable manifest, without creating it."""
     return _build_cron(name, step, schedule, concurrency_policy, starting_deadline_seconds, timezone).to_yaml()
+
+
+def suspend_cron(name):
+    """Suspend the cron so it stops scheduling new runs. Returns the updated cron spec.
+
+    Suspend pauses the schedule; runs already started keep going. Call resume_cron(name) to
+    schedule again. name is the cron name you passed to cron(), in the platform namespace.
+    """
+    pipekit = _service()
+    cron_model = pipekit.suspend_cron(CLUSTER, _NAMESPACE, name)
+    print(f"suspended cron {name}")
+    return cron_model
+
+
+def resume_cron(name):
+    """Resume a suspended cron so it schedules runs again. Returns the updated cron spec."""
+    pipekit = _service()
+    cron_model = pipekit.resume_cron(CLUSTER, _NAMESPACE, name)
+    print(f"resumed cron {name}")
+    return cron_model
+
+
+def delete_cron(name):
+    """Delete the cron. Runs it already started are not affected."""
+    pipekit = _service()
+    pipekit.delete_cron(CLUSTER, _NAMESPACE, name)
+    print(f"deleted cron {name}")
+
+
+def get_cron(name):
+    """Fetch the live cron and print its schedule and whether it is suspended.
+
+    Returns the full cron spec, so you can read other fields off the returned object.
+    """
+    pipekit = _service()
+    cron_model = pipekit.get_cron(CLUSTER, _NAMESPACE, name)
+    schedules = ", ".join(cron_model.spec.schedules or [])
+    state = "suspended" if cron_model.spec.suspend else "active"
+    print(f"cron {name}: schedule {schedules}, {state}")
+    return cron_model
 
 
 def logs(result, follow=False, timeout_seconds=3900):
