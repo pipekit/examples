@@ -31,7 +31,7 @@ This repo ships a Nix dev shell (`shell.nix` at the repo root) that provides Pyt
 ```bash
 direnv allow                 # or run: nix-shell
 python -m venv .venv
-.venv/bin/pip install hera pipekit-sdk ipykernel jupyter
+.venv/bin/pip install hera 'pipekit-sdk>=7.1.0' ipykernel jupyter
 ```
 
 `ipykernel` and `jupyter` let your editor run the notebook. pandas and numpy run on the cluster, not locally, so you do not need them here.
@@ -65,7 +65,7 @@ cron('daily-demand-forecast', forecast_demand, schedule='0 6 * * *')
 
 The cell prints a link to the cron's run history in the UI. Each tick of the schedule starts a new run there. The same step runs with the same platform defaults as the one-off path. A `cron_to_yaml` cell renders the manifest for the GitOps path. It is the same kind of `CronWorkflow` as the native `examples/cronworkflow-example/workflow.yaml`, with the schedule in the `schedules` list that Argo Workflows 3.6 requires.
 
-`cron` is idempotent on the name. Run it again with a different schedule and it updates the existing cron in place, so re-running the cell does not fail. The notebook also manages the cron from the SDK: `get_cron` reads its current state, `suspend_cron` and `resume_cron` pause and restart the schedule, and `delete_cron` removes it. These helpers need pipekit-sdk 2.1.2 or newer. Triggering an on-demand run is still a CLI or UI action; see the [cron CLI commands](https://docs.pipekit.io/cli/cron-workflows).
+`cron` is idempotent on the name. Run it again with a different schedule and it updates the existing cron in place, so re-running the cell does not fail. The notebook also manages the cron from the SDK: `get_cron` reads its current state, `suspend_cron` and `resume_cron` pause and restart the schedule, and `delete_cron` removes it. These helpers need pipekit-sdk 7.1.0 or newer. Triggering an on-demand run is still a CLI or UI action; see the [cron CLI commands](https://docs.pipekit.io/cli/cron-workflows).
 
 ## Run it from the terminal
 
