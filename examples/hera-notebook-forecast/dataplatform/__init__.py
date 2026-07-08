@@ -19,7 +19,7 @@ Hera ``@script`` function and submits it:
 manifest you can commit to git (the GitOps path). ``cron`` schedules the same job to
 run on a recurring basis; re-running it with the same name updates the existing cron.
 ``suspend_cron``, ``resume_cron``, ``delete_cron``, and ``get_cron`` manage that cron
-after you create it. They need pipekit-sdk 2.1.2 or newer.
+after you create it. They need pipekit-sdk 7.1.0 or newer.
 
 These defaults target the Pipekit free trial cluster: namespace ``argo``, service
 account ``argo-workflow`` (set explicitly, since the controller default is ``argo``
@@ -56,6 +56,13 @@ DATA_RESOURCES = Resources(
 _NAMESPACE = "argo"
 _SERVICE_ACCOUNT = "argo-workflow"
 
+# A cron submit reaches the cluster asynchronously. The submit call can return a gateway
+# timeout while the change still applies, so we confirm by polling the cron instead of
+# trusting the call. These bound that poll.
+_CONFIRM_TIMEOUT_SECONDS = 120
+_CONFIRM_INTERVAL_SECONDS = 3
+_TRANSIENT_ERROR_MARKERS = ("timeout", "deadline exceeded", "502", "503", "504")
+
 
 def _service():
     # token="" makes the SDK fall back to the credentials `pipekit login` wrote to
@@ -64,7 +71,11 @@ def _service():
     from pipekit_sdk.service import PipekitService
 
     token = os.environ.get("PIPEKIT_TOKEN") or os.environ.get("PIPEKIT_HERA_TOKEN") or ""
-    return PipekitService(token=token)
+    # The free-trial cluster can be slow to answer the first cron call after it has been
+    # idle, because the agent needs to wake. That can exceed the SDK's default 10s and
+    # error the cell. Give the client headroom; PIPEKIT_TIMEOUT overrides it.
+    timeout = float(os.environ.get("PIPEKIT_TIMEOUT") or 60)
+    return PipekitService(token=token, timeout=timeout)
 
 
 def _build(name, step):
@@ -145,30 +156,77 @@ def _run_history_link(pipekit, name):
     return None
 
 
+def _is_transient(err):
+    """True for gateway or network timeouts, where the cron change may still have applied."""
+    text = str(err).lower()
+    return any(marker in text for marker in _TRANSIENT_ERROR_MARKERS)
+
+
+def _confirm_schedule(pipekit, namespace, name, schedules):
+    """Poll the cron until its schedule matches, so a timed-out submit is not a false alarm.
+
+    The submit reaches the cluster asynchronously, and reads can lag or briefly time out
+    too, so ignore transient read errors and keep polling. Raises TimeoutError if the
+    schedule never matches within the window.
+    """
+    want = list(schedules or [])
+    deadline = time.monotonic() + _CONFIRM_TIMEOUT_SECONDS
+    announced = False
+    while time.monotonic() < deadline:
+        try:
+            cron = pipekit.get_cron(CLUSTER, namespace, name)
+            if list(cron.spec.schedules or []) == want:
+                return
+        except Exception as err:
+            if not _is_transient(err):
+                raise
+        if not announced:
+            print(f"waiting for the cluster to apply {name}...")
+            announced = True
+        time.sleep(_CONFIRM_INTERVAL_SECONDS)
+    raise TimeoutError(
+        f"cron {name} did not report schedule {want} within {_CONFIRM_TIMEOUT_SECONDS}s; "
+        "the cluster may be slow to apply it"
+    )
+
+
 def create_cron(cron_workflow):
     """Create a built CronWorkflow on Pipekit, or update it if the name already exists.
 
-    The call is idempotent on the cron name. An analyst re-running the cell with a changed
-    schedule updates the existing cron instead of failing, so there is no delete-first step.
-    Prints whether it created or updated, plus a link to the cron's run history. Returns the
-    PipeRun on create, or None on update, since the update call returns the cron spec rather
-    than a run.
+    Idempotent on the cron name: re-running the cell with a changed schedule updates the
+    existing cron. The submit call can return a gateway timeout when the path to the cluster
+    is briefly slow even though the change applies, so this confirms by polling the cron and
+    reports success only once its schedule matches. Prints whether it created or updated,
+    plus a run-history link. Returns the PipeRun on create, else None.
     """
     pipekit = _service()
     name = cron_workflow.name
     schedule = ", ".join(cron_workflow.schedules or [])
+    namespace = cron_workflow.namespace or _NAMESPACE
+
+    action = "created"
+    pipe_run = None
     try:
         pipe_run = pipekit.create(cron_workflow, CLUSTER)
     except Exception as err:
-        if "already exists" not in str(err):
+        if "already exists" in str(err):
+            action = "updated"
+            try:
+                pipekit.update_cron(cron_workflow, CLUSTER)
+            except Exception as update_err:
+                if not _is_transient(update_err):
+                    raise
+        elif _is_transient(err):
+            pass  # the create likely reached the cluster; the poll below confirms it
+        else:
             raise
-        pipekit.update_cron(cron_workflow, CLUSTER)
-        print(f"updated cron {name} (schedule {schedule})")
-        if link := _run_history_link(pipekit, name):
-            print(f"run history: {link}")
-        return None
-    print(f"created cron {name} (schedule {schedule})")
-    print(f"run history: {_UI_URL}/pipes/{pipe_run.pipe_uuid}")
+
+    _confirm_schedule(pipekit, namespace, name, cron_workflow.schedules)
+    print(f"{action} cron {name} (schedule {schedule})")
+    if pipe_run is not None:
+        print(f"run history: {_UI_URL}/pipes/{pipe_run.pipe_uuid}")
+    elif link := _run_history_link(pipekit, name):
+        print(f"run history: {link}")
     return pipe_run
 
 
