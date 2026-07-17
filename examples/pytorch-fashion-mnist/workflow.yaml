@@ -1,0 +1,231 @@
+---
+# A four-stage machine-learning pipeline as a single Argo Workflow:
+#
+#   prep  ->  train (x3, in parallel)  ->  register
+#
+# prep downloads Fashion-MNIST once and saves it as an artifact. train fans out over
+# three hyperparameter configs; each pod trains a small PyTorch model on the CPU and
+# writes its model plus metrics as an artifact. register reads every candidate, picks
+# the most accurate, and writes the winning model and a model card to the artifact
+# store. This is the "data prep, train, evaluate, register" shape, scaled to run inside
+# the Pipekit free trial cluster.
+#
+# PyTorch is installed at run time from download.pytorch.org (the CPU wheel), so the
+# only Docker Hub image is python:3.11-slim. The free trial cluster shares one egress
+# IP, and pulling large images from Docker Hub there can hit the anonymous rate limit;
+# fetching the wheel from pytorch.org avoids that.
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: fashion-mnist-
+  namespace: argo
+spec:
+  entrypoint: main
+  serviceAccountName: argo-workflow
+  arguments:
+    parameters:
+      # The pip index for the CPU-only PyTorch build. Kept as a parameter so you can
+      # point it at an internal mirror without editing every step.
+      - name: torch_index
+        value: "https://download.pytorch.org/whl/cpu"
+  templates:
+    - name: main
+      dag:
+        tasks:
+          - name: prep
+            template: prep
+          - name: train
+            template: train
+            depends: prep
+            arguments:
+              parameters:
+                - name: idx
+                  value: "{{item.idx}}"
+                - name: lr
+                  value: "{{item.lr}}"
+                - name: hidden
+                  value: "{{item.hidden}}"
+            withItems:
+              - { idx: "0", lr: "0.05", hidden: "64" }
+              - { idx: "1", lr: "0.10", hidden: "128" }
+              - { idx: "2", lr: "0.20", hidden: "256" }
+          - name: register
+            template: register
+            depends: train
+
+    # prep: download Fashion-MNIST, take a subset to keep the job light, and save the
+    # tensors as one artifact the train pods read.
+    - name: prep
+      container:
+        image: python:3.11-slim
+        command: [bash, -c]
+        args:
+          - |
+            set -e
+            pip install --quiet --no-cache-dir torch torchvision --index-url {{workflow.parameters.torch_index}}
+            python - <<'PY'
+            import os
+            import torch
+            from torchvision import datasets, transforms
+
+            to_tensor = transforms.ToTensor()
+            train_ds = datasets.FashionMNIST("/tmp/d", train=True, download=True, transform=to_tensor)
+            test_ds = datasets.FashionMNIST("/tmp/d", train=False, download=True, transform=to_tensor)
+
+            def take(dataset, count):
+                images = torch.stack([dataset[i][0] for i in range(count)])
+                labels = torch.tensor([dataset[i][1] for i in range(count)])
+                return images, labels
+
+            train_x, train_y = take(train_ds, 8000)
+            test_x, test_y = take(test_ds, 2000)
+            os.makedirs("/tmp/out", exist_ok=True)
+            torch.save(
+                {"train_x": train_x, "train_y": train_y, "test_x": test_x, "test_y": test_y},
+                "/tmp/out/data.pt",
+            )
+            print("prep: train", tuple(train_x.shape), "test", tuple(test_x.shape))
+            PY
+        resources:
+          requests: { cpu: "500m", memory: 512Mi, ephemeral-storage: 512Mi }
+          limits: { cpu: "1", memory: 1500Mi, ephemeral-storage: 3Gi }
+      outputs:
+        artifacts:
+          - name: dataset
+            path: /tmp/out
+            archive:
+              none: {}
+            s3:
+              key: "{{workflow.uid}}/dataset"
+
+    # train: one pod per hyperparameter config. Trains a small MLP, scores it on the
+    # test set, and writes the model and its metrics as a candidate artifact.
+    - name: train
+      inputs:
+        parameters:
+          - name: idx
+          - name: lr
+          - name: hidden
+        artifacts:
+          - name: dataset
+            path: /tmp/in
+            s3:
+              key: "{{workflow.uid}}/dataset"
+      container:
+        image: python:3.11-slim
+        command: [bash, -c]
+        args:
+          - |
+            set -e
+            pip install --quiet --no-cache-dir torch --index-url {{workflow.parameters.torch_index}}
+            python - <<'PY'
+            import json
+            import os
+            import torch
+            from torch import nn
+
+            idx = "{{inputs.parameters.idx}}"
+            lr = float("{{inputs.parameters.lr}}")
+            hidden = int("{{inputs.parameters.hidden}}")
+            pixels, classes = 28 * 28, 10
+
+            data = torch.load("/tmp/in/data.pt")
+            model = nn.Sequential(
+                nn.Flatten(),
+                nn.Linear(pixels, hidden),
+                nn.ReLU(),
+                nn.Linear(hidden, classes),
+            )
+            torch.manual_seed(0)
+            optimizer = torch.optim.SGD(model.parameters(), lr=lr)
+            loss_fn = nn.CrossEntropyLoss()
+            train_x, train_y = data["train_x"], data["train_y"]
+            sample_count = train_x.shape[0]
+            model.train()
+            order = torch.randperm(sample_count)
+            for start in range(0, sample_count, 128):
+                batch = order[start : start + 128]
+                optimizer.zero_grad()
+                loss_fn(model(train_x[batch]), train_y[batch]).backward()
+                optimizer.step()
+
+            model.eval()
+            with torch.no_grad():
+                predictions = model(data["test_x"]).argmax(dim=1)
+                accuracy = float((predictions == data["test_y"]).float().mean())
+
+            os.makedirs("/tmp/out", exist_ok=True)
+            torch.save(model.state_dict(), "/tmp/out/model.pt")
+            with open("/tmp/out/metrics.json", "w") as handle:
+                json.dump({"idx": idx, "lr": lr, "hidden": hidden, "accuracy": round(accuracy, 4)}, handle)
+            print(f"train config {idx}: lr={lr} hidden={hidden} accuracy={accuracy:.4f}")
+            PY
+        resources:
+          requests: { cpu: "500m", memory: 512Mi, ephemeral-storage: 512Mi }
+          limits: { cpu: "1", memory: 2Gi, ephemeral-storage: 3Gi }
+      outputs:
+        artifacts:
+          - name: candidate
+            path: /tmp/out
+            archive:
+              none: {}
+            s3:
+              key: "{{workflow.uid}}/candidates/{{inputs.parameters.idx}}"
+
+    # register: read every candidate's metrics, pick the most accurate, and write the
+    # winning model and a model card. No PyTorch needed here, so this step is quick.
+    - name: register
+      inputs:
+        artifacts:
+          - name: candidates
+            path: /tmp/candidates
+            s3:
+              key: "{{workflow.uid}}/candidates"
+      container:
+        image: python:3.11-slim
+        command: [bash, -c]
+        args:
+          - |
+            set -e
+            python - <<'PY'
+            import glob
+            import json
+            import os
+            import shutil
+
+            best = None
+            for metrics_path in sorted(glob.glob("/tmp/candidates/*/metrics.json")):
+                with open(metrics_path) as handle:
+                    metrics = json.load(handle)
+                print("candidate:", metrics)
+                if best is None or metrics["accuracy"] > best["accuracy"]:
+                    best = dict(metrics, _dir=os.path.dirname(metrics_path))
+
+            os.makedirs("/tmp/out", exist_ok=True)
+            shutil.copy(os.path.join(best["_dir"], "model.pt"), "/tmp/out/model.pt")
+            card = {
+                "framework": "pytorch",
+                "dataset": "fashion-mnist",
+                "selected": {key: best[key] for key in ("idx", "lr", "hidden", "accuracy")},
+            }
+            with open("/tmp/out/model-card.json", "w") as handle:
+                json.dump(card, handle, indent=2)
+            print("registered best model:", card["selected"])
+            PY
+        resources:
+          requests: { cpu: "250m", memory: 256Mi, ephemeral-storage: 256Mi }
+          limits: { cpu: "500m", memory: 512Mi, ephemeral-storage: 512Mi }
+      outputs:
+        parameters:
+          # Exposed as a node output so the winning config is visible in the run graph
+          # even after the pod is garbage-collected on success.
+          - name: selected
+            valueFrom:
+              path: /tmp/out/model-card.json
+        artifacts:
+          - name: registered
+            path: /tmp/out
+            archive:
+              none: {}
+            s3:
+              key: "{{workflow.uid}}/registered"

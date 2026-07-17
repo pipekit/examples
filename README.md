@@ -14,12 +14,14 @@ You are encouraged to fork the repo and experiment with adjusting the workflows 
 
 ## Examples
 
-| Example Name                                               | Description                                                                                                                                |
-|------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
-| [cronworkflow-example]( examples/cronworkflow-example/ )   | Runs a basic CronWorkflow.                                                                                                                 |
-| [dag-diamond]( examples/dag-diamond/ )                     | Runs a basic DAG Workflow.                                                                                                                 |
-| [external-logs]( examples/external-logs/ )                 | Workflows deploys a kubernetes job. You can see the logs from the job within Pipekit.                                                      |
-| [fan-out-fan-in]( examples/fan-out-fan-in/ )               | Shows how S3 artifact processing can be parallelized with Argo Workflows using a fan-out approach.                                         |
-| [get-versions](examples/get-versions/)                     | A workflow that outputs the versions of software installed in a Pipekit free trial cluster. Available as both a Hera and a native Workflow |
-| [hera-coinflip](examples/hera-coinflip/)                   | Runs a basic coinflip example using the Hera Python framework.                                                                             |
-| [hera-notebook-forecast](examples/hera-notebook-forecast/) | Press-play data job from a Jupyter notebook: aggregate energy demand and forecast the next day. Shows a platform abstraction over Hera.    |
+| Example Name                                               | Description                                                                                                                                           |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [ci-pr-check](examples/ci-pr-check/)                       | A pull-request check pipeline: checkout, then lint and unit tests in parallel, with a combined status on exit. Runs in the free trial cluster.        |
+| [cronworkflow-example](examples/cronworkflow-example/)     | Runs a basic CronWorkflow.                                                                                                                            |
+| [dag-diamond](examples/dag-diamond/)                       | Runs a basic DAG Workflow.                                                                                                                            |
+| [external-logs](examples/external-logs/)                   | Workflows deploys a kubernetes job. You can see the logs from the job within Pipekit.                                                                 |
+| [fan-out-fan-in](examples/fan-out-fan-in/)                 | Shows how S3 artifact processing can be parallelized with Argo Workflows using a fan-out approach.                                                    |
+| [get-versions](examples/get-versions/)                     | A workflow that outputs the versions of software installed in a Pipekit free trial cluster. Available as both a Hera and a native Workflow            |
+| [hera-coinflip](examples/hera-coinflip/)                   | Runs a basic coinflip example using the Hera Python framework.                                                                                        |
+| [hera-notebook-forecast](examples/hera-notebook-forecast/) | Press-play data job from a Jupyter notebook: aggregate energy demand and forecast the next day. Shows a platform abstraction over Hera.               |
+| [pytorch-fashion-mnist](examples/pytorch-fashion-mnist/)   | A PyTorch training pipeline: prep, parallel train, and register the best model. Authored with the Argo Workflows Python SDK and as a native Workflow. |

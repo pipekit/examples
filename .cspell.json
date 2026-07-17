@@ -52,6 +52,14 @@
         "stdenv",
         "demisto",
         "toomanyrequests",
-        "envrc"
+        "envrc",
+        "MNIST",
+        "torchvision",
+        "makedirs",
+        "optim",
+        "argmax",
+        "randperm",
+        "shutil",
+        "pytest"
     ]
 }
