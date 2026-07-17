@@ -1,0 +1,131 @@
+---
+# A pull-request check pipeline as a single Argo Workflow:
+#
+#   checkout  ->  lint + unit-test (in parallel)
+#   onExit:   report  (posts a combined pass/fail status)
+#
+# checkout clones a repository and passes the code to the next steps as an artifact.
+# lint and unit-test run in parallel. An exit handler reports the overall result, so the
+# status reflects the whole run whether it passed or failed.
+#
+# This is a simplified, self-contained version of the CI that builds this examples
+# repository (see ci/ci.yaml). It runs inside the Pipekit free trial cluster with no
+# secrets: by default it checks the public pipekit/examples repository. The full
+# build, test, and deploy pipeline is described in the Pipekit docs under CI/CD.
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: ci-pr-check-
+  namespace: argo
+spec:
+  entrypoint: main
+  onExit: report
+  serviceAccountName: argo-workflow
+  arguments:
+    parameters:
+      - name: repo_url
+        value: "https://github.com/pipekit/examples.git"
+      - name: ref
+        value: "main"
+      # The command each check runs, from the repository root. Override these to point
+      # at your own project's linter and tests.
+      - name: lint_cmd
+        value: "pip install --quiet ruff && ruff check ."
+      - name: test_cmd
+        value: "python examples/hera-notebook-forecast/test_demand_forecast.py"
+  templates:
+    - name: main
+      dag:
+        tasks:
+          - name: checkout
+            template: checkout
+          - name: lint
+            template: check
+            depends: checkout
+            arguments:
+              parameters:
+                - name: title
+                  value: "lint"
+                - name: command
+                  value: "{{workflow.parameters.lint_cmd}}"
+          - name: unit-test
+            template: check
+            depends: checkout
+            arguments:
+              parameters:
+                - name: title
+                  value: "unit-test"
+                - name: command
+                  value: "{{workflow.parameters.test_cmd}}"
+
+    # checkout: shallow-clone the repository and pass the working tree on as an artifact.
+    - name: checkout
+      container:
+        image: python:3.11-slim
+        command: [bash, -c]
+        args:
+          - |
+            set -e
+            apt-get update -qq && apt-get install -y -qq git >/dev/null
+            git clone --depth 1 --branch {{workflow.parameters.ref}} {{workflow.parameters.repo_url}} /tmp/src
+            echo "checked out {{workflow.parameters.repo_url}} at {{workflow.parameters.ref}}"
+        resources:
+          requests: { cpu: "250m", memory: 256Mi, ephemeral-storage: 256Mi }
+          limits: { cpu: "500m", memory: 512Mi, ephemeral-storage: 1Gi }
+      outputs:
+        artifacts:
+          - name: source
+            path: /tmp/src
+            s3:
+              key: "{{workflow.uid}}/source"
+
+    # check: run one command against the checked-out code. Reused by lint and unit-test.
+    - name: check
+      inputs:
+        parameters:
+          - name: title
+          - name: command
+        artifacts:
+          - name: source
+            path: /tmp/src
+            s3:
+              key: "{{workflow.uid}}/source"
+      container:
+        image: python:3.11-slim
+        workingDir: /tmp/src
+        command: [bash, -c]
+        args:
+          - |
+            set -e
+            echo "=== {{inputs.parameters.title}} ==="
+            {{inputs.parameters.command}}
+        resources:
+          requests: { cpu: "250m", memory: 256Mi, ephemeral-storage: 256Mi }
+          limits: { cpu: "1", memory: 768Mi, ephemeral-storage: 1Gi }
+
+    # report: exit handler. Prints the final status of the whole run. If a GitHub token
+    # is provided as the GITHUB_TOKEN secret on the pipe, it also posts a commit status;
+    # without one it prints the status it would post, so the example runs with no setup.
+    - name: report
+      container:
+        image: python:3.11-slim
+        command: [bash, -c]
+        args:
+          - |
+            set -e
+            STATUS="{{workflow.status}}"
+            if [ "$STATUS" = "Succeeded" ]; then STATE="success"; else STATE="failure"; fi
+            echo "pull-request check finished: $STATUS -> commit status '$STATE'"
+            if [ -n "${GITHUB_TOKEN:-}" ] && [ -n "${GITHUB_REPOSITORY:-}" ] && [ -n "${GIT_SHA:-}" ]; then
+              apt-get update -qq && apt-get install -y -qq curl >/dev/null
+              curl -sS -X POST \
+                -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+                -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GIT_SHA}" \
+                -d "{\"state\":\"${STATE}\",\"context\":\"pipekit/ci\"}"
+            else
+              echo "GITHUB_TOKEN not set; skipping the GitHub commit status post"
+            fi
+        resources:
+          requests: { cpu: "100m", memory: 128Mi, ephemeral-storage: 128Mi }
+          limits: { cpu: "250m", memory: 256Mi, ephemeral-storage: 256Mi }
