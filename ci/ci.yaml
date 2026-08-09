@@ -321,7 +321,7 @@ spec:
           - name: pipeUUID
           - name: runUUID
       container:
-        image: ghcr.io/crumbhole/ci-github-notifier:v1.4.6
+        image: ghcr.io/crumbhole/ci-github-notifier:v1.7.1
         imagePullPolicy: Always
         command:
           - /go/bin/ci-github-notifier
