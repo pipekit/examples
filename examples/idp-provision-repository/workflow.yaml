@@ -1,0 +1,108 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: provision-repository-
+spec:
+  entrypoint: main
+  serviceAccountName: argo
+  imagePullSecrets:
+    - name: regcred
+  arguments:
+    parameters:
+      - name: repo-name
+        value: payments-api
+      - name: team
+        value: team-payments
+      - name: visibility
+        value: internal
+      - name: service-type
+        value: service
+      - name: enable-ci
+        value: "true"
+  templates:
+    - name: main
+      dag:
+        tasks:
+          - name: validate-request
+            template: validate
+          - name: create-repository
+            template: create-repo
+            dependencies: [validate-request]
+          - name: apply-branch-protection
+            template: branch-protection
+            dependencies: [create-repository]
+          - name: grant-team-access
+            template: team-access
+            dependencies: [create-repository]
+          - name: seed-ci-pipeline
+            template: seed-ci
+            dependencies: [create-repository]
+            when: "{{workflow.parameters.enable-ci}} == true"
+          - name: register-in-catalog
+            template: catalog
+            dependencies: [apply-branch-protection, grant-team-access]
+
+    - name: validate
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Validating request for {{workflow.parameters.repo-name}}"
+            echo "  owner team:  {{workflow.parameters.team}}"
+            echo "  visibility:  {{workflow.parameters.visibility}}"
+            echo "  type:        {{workflow.parameters.service-type}}"
+            sleep 3
+            echo "Naming policy OK. Team exists in the directory."
+
+    - name: create-repo
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Creating repository {{workflow.parameters.repo-name}}"
+            sleep 6
+            echo "Repository created from the {{workflow.parameters.service-type}} scaffold"
+            echo "  README.md, CODEOWNERS, .gitlab-ci.yml, Dockerfile"
+
+    - name: branch-protection
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Applying branch protection to main"
+            sleep 4
+            echo "  require 2 approvals, block force push, require pipeline success"
+
+    - name: team-access
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Granting {{workflow.parameters.team}} maintainer access"
+            sleep 3
+            echo "Granting platform-engineering owner access"
+
+    - name: seed-ci
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Seeding CI pipeline for {{workflow.parameters.repo-name}}"
+            sleep 4
+            echo "  build, unit tests, container scan, publish"
+
+    - name: catalog
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Registering {{workflow.parameters.repo-name}} in the service catalog"
+            sleep 3
+            echo "Done. Developers can now clone and push."

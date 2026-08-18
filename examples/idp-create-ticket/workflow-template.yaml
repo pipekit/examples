@@ -1,0 +1,75 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: create-ticket
+spec:
+  entrypoint: main
+  serviceAccountName: argo
+  imagePullSecrets:
+    - name: regcred
+  arguments:
+    parameters:
+      - name: summary
+        value: Provision test environment for the payments release
+      - name: requester
+        value: n.hansen
+      - name: priority
+        value: "3"
+      - name: system
+        value: servicenow
+  templates:
+    - name: main
+      steps:
+        - - name: validate-request
+            template: validate
+        - - name: create-ticket
+            template: create
+        - - name: attach-context
+            template: attach
+        - - name: notify-requester
+            template: notify
+
+    - name: validate
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Ticket request from {{workflow.parameters.requester}}"
+            echo "  summary:  {{workflow.parameters.summary}}"
+            echo "  priority: {{workflow.parameters.priority}}"
+            echo "  system:   {{workflow.parameters.system}}"
+            sleep 2
+            echo "Requester is in the directory and may raise priority 3 tickets."
+
+    - name: create
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Creating ticket in {{workflow.parameters.system}}"
+            sleep 5
+            echo "REQ0098231 created"
+
+    - name: attach
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Attaching context to REQ0098231"
+            sleep 3
+            echo "  linked repository, owning team and cost centre"
+            echo "  linked the Pipekit run that raised the ticket"
+
+    - name: notify
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Notifying {{workflow.parameters.requester}}"
+            sleep 2
+            echo "REQ0098231 is queued for approval"

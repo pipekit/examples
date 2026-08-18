@@ -1,0 +1,116 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: onboard-service-
+spec:
+  entrypoint: main
+  serviceAccountName: argo
+  imagePullSecrets:
+    - name: regcred
+  arguments:
+    parameters:
+      - name: service-name
+        value: customer-portal
+      - name: team
+        value: team-channels
+      - name: environment
+        value: staging
+      - name: cost-centre
+        value: CC-4471
+  templates:
+    - name: main
+      dag:
+        tasks:
+          - name: validate-request
+            template: validate
+          - name: create-repository
+            template: create-repo
+            dependencies: [validate-request]
+          - name: provision-namespace
+            template: provision-namespace
+            dependencies: [validate-request]
+          - name: seed-ci-pipeline
+            template: seed-ci
+            dependencies: [create-repository]
+          - name: open-change-ticket
+            template: change-ticket
+            dependencies: [provision-namespace, seed-ci-pipeline]
+          - name: notify-team
+            template: notify
+            dependencies: [open-change-ticket]
+
+    - name: validate
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Onboarding {{workflow.parameters.service-name}} for {{workflow.parameters.team}}"
+            echo "  environment: {{workflow.parameters.environment}}"
+            echo "  cost centre: {{workflow.parameters.cost-centre}}"
+            sleep 3
+            echo "Request is valid. Cost centre is active."
+
+    # The upstream Git API is rate limited and occasionally rejects the first
+    # call. The retry makes that invisible to the developer who submitted the
+    # form, and Pipekit shows the retry in the run tree.
+    - name: create-repo
+      retryStrategy:
+        limit: 2
+        retryPolicy: Always
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Creating repository {{workflow.parameters.service-name}} (attempt {{retries}})"
+            sleep 4
+            if [ "{{retries}}" -lt 1 ]; then
+              echo "Git API returned 429 Too Many Requests"
+              exit 1
+            fi
+            echo "Repository created and scaffolded"
+
+    - name: provision-namespace
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Provisioning namespace {{workflow.parameters.service-name}}-{{workflow.parameters.environment}}"
+            sleep 6
+            echo "  resource quota: 8 CPU, 16Gi memory"
+            echo "  network policy: default-deny plus egress to the service mesh"
+            echo "  chargeback label: {{workflow.parameters.cost-centre}}"
+
+    - name: seed-ci
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Seeding CI pipeline for {{workflow.parameters.service-name}}"
+            sleep 5
+            echo "  build, unit tests, container scan, publish"
+
+    - name: change-ticket
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Opening change ticket for {{workflow.parameters.service-name}}"
+            sleep 4
+            echo "CHG0041882 raised for the {{workflow.parameters.environment}} environment"
+            echo "Approver group: platform-engineering"
+
+    - name: notify
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Notifying {{workflow.parameters.team}}"
+            sleep 2
+            echo "Onboarding complete for {{workflow.parameters.service-name}}"

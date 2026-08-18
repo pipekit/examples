@@ -1,0 +1,107 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: ci-build-and-scan
+spec:
+  entrypoint: main
+  serviceAccountName: argo
+  imagePullSecrets:
+    - name: regcred
+  arguments:
+    parameters:
+      - name: service
+        value: payments-api
+      - name: git-ref
+        value: main
+      - name: fail-on-critical
+        value: "true"
+  templates:
+    - name: main
+      dag:
+        tasks:
+          - name: checkout
+            template: checkout
+          - name: build
+            template: build
+            dependencies: [checkout]
+          - name: unit-tests
+            template: unit-tests
+            dependencies: [build]
+          - name: lint
+            template: lint
+            dependencies: [build]
+          - name: container-scan
+            template: container-scan
+            dependencies: [build]
+          - name: publish
+            template: publish
+            dependencies: [unit-tests, lint, container-scan]
+
+    - name: checkout
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Checking out {{workflow.parameters.service}} at {{workflow.parameters.git-ref}}"
+            sleep 3
+            echo "HEAD is 4f2a91c"
+
+    - name: build
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Building container image for {{workflow.parameters.service}}"
+            sleep 8
+            echo "Built {{workflow.parameters.service}}:4f2a91c"
+
+    - name: unit-tests
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Running unit tests"
+            sleep 6
+            echo "94 passed, 0 failed, coverage 81%"
+
+    - name: lint
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Running lint and static analysis"
+            sleep 4
+            echo "no findings"
+
+    # Set fail-on-critical to "true" to see how Pipekit surfaces a failing step
+    # and its logs. The rest of the DAG stops, and publish never runs.
+    - name: container-scan
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Scanning {{workflow.parameters.service}}:4f2a91c for vulnerabilities"
+            sleep 5
+            echo "MEDIUM  CVE-2026-10422  libssl   fixed in 3.0.14"
+            if [ "{{workflow.parameters.fail-on-critical}}" = "true" ]; then
+              echo "CRITICAL  CVE-2026-20881  zlib  no fix available"
+              echo "Scan gate failed: 1 critical finding"
+              exit 1
+            fi
+            echo "no critical findings"
+
+    - name: publish
+      container:
+        image: busybox
+        command: [sh, -c]
+        args:
+          - |
+            echo "Publishing {{workflow.parameters.service}}:4f2a91c to the internal registry"
+            sleep 4
+            echo "Published. Deployment request opened for the staging environment."
